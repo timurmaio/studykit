@@ -2,11 +2,15 @@
   "name": "studykit-frontend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "22.14.0"
+  },
+  "packageManager": "pnpm@10.4.1",
+  "type": "module",
   "scripts": {
-    "dev": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject",
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
     "fmt": "prettier --write '**/*.{js,jsx,json,ts,tsx,css,html}'"
   },
   "dependencies": {
@@ -24,7 +28,8 @@
     "web-vitals": "2.1.4"
   },
   "devDependencies": {
-    "react-scripts": "5.0.1"
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.1.4"
   },
   "browserslist": {
     "production": [
@@ -36,6 +41,14 @@
       "last 1 chrome version",
       "last 1 firefox version",
       "last 1 safari version"
+    ]
+  },
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "esbuild"
+    ],
+    "onlyBuiltDependencies": [
+      "esbuild"
     ]
   }
 }
