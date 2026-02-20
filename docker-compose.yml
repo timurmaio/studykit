@@ -139,6 +139,29 @@ services:
       - redis
       - executor_v2
 
+  directus:
+    image: directus/directus:11.8.0
+    environment:
+      KEY: ${DIRECTUS_KEY:-change_this_directus_key_32_chars_min}
+      SECRET: ${DIRECTUS_SECRET:-change_this_directus_secret_32_chars_min}
+      DB_CLIENT: pg
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: studykit_development
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SCHEMA: directus
+      ADMIN_EMAIL: ${DIRECTUS_ADMIN_EMAIL:-admin@studykit.dev}
+      ADMIN_PASSWORD: ${DIRECTUS_ADMIN_PASSWORD:-change_me_please}
+      CORS_ENABLED: "true"
+      CORS_ORIGIN: "http://localhost:5173,http://localhost:3001"
+    depends_on:
+      - db
+    ports:
+      - "8055:8055"
+    volumes:
+      - directus_uploads:/directus/uploads
+
   executor_v2:
     build:
       context: .
@@ -154,3 +177,4 @@ volumes:
   frontend_node_modules:
   admin_node_modules:
   redis_data_v2:
+  directus_uploads:
