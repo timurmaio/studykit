@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import { Link } from 'react-router';
-import _axios from 'axios'
 import { API_URL, axios } from '../../../config'
 
 interface User {
@@ -55,7 +54,7 @@ class ListUsers extends Component<ListUsersProps, ListUsersState> {
   renderItem = (item: User) => {
     return (
       <tr key={item.id}>
-        <td scope="row">{item.id}</td>
+        <td>{item.id}</td>
         <td>{item.first_name}</td>
         <td>{item.last_name}</td>
         <td>{item.email}</td>

@@ -29,7 +29,7 @@ class NewCourse extends Component<NewCourseProps, NewCourseState> {
     this.setState({ [name]: value } as Pick<NewCourseState, keyof NewCourseState>)
   }
 
-  handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  handleSubmit = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
     const url = API_URL + '/api/admin/courses'
 

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { API_URL } from "../../config";
 import { Header } from "../../components/Header";
 
-export function App(): JSX.Element {
+export function App() {
   const [state, setState] = useState({
     id: "",
     email: "",

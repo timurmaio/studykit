@@ -1,0 +1,25 @@
+{
+  "name": "@studykit/api-v2",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test:parity": "bun scripts/parity-check.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.4",
+    "@studykit/db": "workspace:*",
+    "bcrypt-ts": "^8.0.1",
+    "bullmq": "^5.58.7",
+    "hono": "^4.9.8",
+    "postgres": "^3.4.7",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.2"
+  }
+}

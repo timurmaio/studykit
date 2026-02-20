@@ -1,0 +1,19 @@
+{
+  "name": "studykit-monorepo",
+  "private": true,
+  "scripts": {
+    "install:frontend": "pnpm --dir apps/frontend install",
+    "install:admin": "pnpm --dir apps/admin install",
+    "build:frontend": "pnpm --dir apps/frontend build",
+    "build:admin": "pnpm --dir apps/admin build",
+    "dev:frontend": "pnpm --dir apps/frontend dev",
+    "dev:admin": "pnpm --dir apps/admin dev"
+  },
+  "devDependencies": {
+    "drizzle-orm": "^0.44.5"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

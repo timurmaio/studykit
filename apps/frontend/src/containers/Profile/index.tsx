@@ -37,45 +37,46 @@ export function Profile() {
 
   return (
     <div className="container profile-page">
-      <div className="course-decor course-decor--mint" aria-hidden="true" />
-      <div className="course-decor course-decor--peach" aria-hidden="true" />
       <div className="row">
         <div className="col-12 col-lg-4 mb-24">
-          <div className="panel profile-card">
-            <div className="profile-avatar">{initials}</div>
-            <h2 className="profile-name mb-4">
-              {user.firstName || "Студент"} {user.lastName}
-            </h2>
-            <p className="profile-email mb-20">
-              {user.email || "email@example.com"}
-            </p>
-            <button className="button profile-action mb-12" type="button">
-              Изменить профиль
-            </button>
-            <button
-              className="button button--ghost profile-action"
-              type="button"
-              onClick={handleSignOut}
-            >
-              Выйти
-            </button>
+          <div className="profile-card">
+            <div className="profile-card-banner" aria-hidden="true" />
+            <div className="profile-card-body">
+              <div className="profile-avatar">{initials}</div>
+              <h2 className="profile-name mb-4">
+                {user.firstName || "Студент"} {user.lastName}
+              </h2>
+              <p className="profile-email mb-20">
+                {user.email || "email@example.com"}
+              </p>
+              <button className="button profile-action mb-12" type="button">
+                Изменить профиль
+              </button>
+              <button
+                className="button button--ghost profile-action"
+                type="button"
+                onClick={handleSignOut}
+              >
+                Выйти
+              </button>
+            </div>
           </div>
         </div>
         <div className="col-12 col-lg-8">
-          <div className="panel profile-info">
-            <header className="profile-info-title mb-20">Личные данные</header>
+          <div className="profile-info">
+            <h2 className="profile-info-title mb-20">Личные данные</h2>
             <div className="profile-grid">
               <div className="profile-field">
                 <span className="profile-label">Имя</span>
-                <strong>{user.firstName || "-"}</strong>
+                <strong>{user.firstName || "—"}</strong>
               </div>
               <div className="profile-field">
                 <span className="profile-label">Фамилия</span>
-                <strong>{user.lastName || "-"}</strong>
+                <strong>{user.lastName || "—"}</strong>
               </div>
               <div className="profile-field profile-field--full">
                 <span className="profile-label">Почта</span>
-                <strong>{user.email || "-"}</strong>
+                <strong>{user.email || "—"}</strong>
               </div>
             </div>
           </div>

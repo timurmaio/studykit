@@ -1,11 +1,23 @@
-if User.find_by(email: 'admin').nil?
+admin_email = ENV['ADMIN_EMAIL'].presence || 'admin@example.com'
+admin_password = ENV['ADMIN_PASSWORD'].presence || 'change_me_please'
+
+legacy_admin = User.find_by(email: 'admin')
+target_admin = User.find_by(email: admin_email)
+
+if target_admin.nil? && legacy_admin
+  legacy_admin.update!(email: admin_email, password: admin_password, role: 'admin')
+end
+
+if User.find_by(email: admin_email).nil?
   User.create!(
     first_name: 'Тимур',
     last_name: 'Платонов',
-    email: 'admin',
-    password: 'admin',
+    email: admin_email,
+    password: admin_password,
     role: 'admin'
   )
+else
+  User.find_by(email: admin_email).update!(password: admin_password, role: 'admin')
 end
 
 if WikidataItem.count == 0
@@ -40,7 +52,7 @@ if Course.count == 0
   c = Course.create!(
     title: 'Базы данных',
     description: 'На этом курсе можно пройти тесты по БД PostgreSQL',
-    owner: User.find_by!(email: 'admin')
+    owner: User.find_by!(email: admin_email)
   )
 
   Lecture.create!(
@@ -64,7 +76,7 @@ if LectureContent.count == 0
   Dir[Rails.root.join('db/seed_sql/*.rb')].sort.each { |file| load file }
 end
 
-rust_owner = User.find_by!(email: 'admin')
+rust_owner = User.find_by!(email: admin_email)
 rust_course = Course.find_or_create_by!(title: 'Основы Rust') do |course|
   course.description = 'Простой курс по Rust из 10 коротких лекций'
   course.owner = rust_owner

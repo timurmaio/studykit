@@ -28,19 +28,18 @@ class ImageUpload extends Component<ImageUploadProps, ImageUploadState> {
   _handleImageChange (e: React.ChangeEvent<HTMLInputElement>) {
     e.preventDefault()
 
-    let reader = new FileReader()
-    let file = e.target.files?.[0]
+    const reader = new FileReader()
+    const file = e.target.files?.[0]
+    if (!file) return
 
-    if (file) {
-      reader.onloadend = () => {
-        this.setState({
-          file: file,
-          imagePreviewUrl: reader.result as string
-        })
-      }
-
-      reader.readAsDataURL(file)
+    reader.onloadend = () => {
+      this.setState({
+        file,
+        imagePreviewUrl: reader.result as string
+      })
     }
+
+    reader.readAsDataURL(file)
   }
 
   render () {
@@ -54,7 +53,7 @@ class ImageUpload extends Component<ImageUploadProps, ImageUploadState> {
       <div>
         <form onSubmit={this._handleSubmit}>
           <input type='file' onChange={this._handleImageChange} />
-          <button type='submit' onClick={this._handleSubmit}>Upload Image</button>
+          <button type='submit'>Upload Image</button>
         </form>
         {$imagePreview}
       </div>

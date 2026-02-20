@@ -16,8 +16,8 @@
   "dependencies": {
     "axios": "1.13.5",
     "bootstrap": "5.3.8",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
     "react-markdown": "10.1.0",
     "react-router": "7.13.0",
     "react-router-dom": "7.13.0",
@@ -25,8 +25,8 @@
   },
   "devDependencies": {
     "@types/node": "22.19.11",
-    "@types/react": "18.0.9",
-    "@types/react-dom": "18.0.3",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
     "@vitejs/plugin-react": "^5.1.4",
     "prettier": "3.8.1",
     "typescript": "^5.6.3",
@@ -42,14 +42,6 @@
       "last 1 chrome version",
       "last 1 firefox version",
       "last 1 safari version"
-    ]
-  },
-  "pnpm": {
-    "ignoredBuiltDependencies": [
-      "esbuild"
-    ],
-    "onlyBuiltDependencies": [
-      "esbuild"
     ]
   }
 }

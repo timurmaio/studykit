@@ -56,11 +56,18 @@ export function SignUp() {
   };
 
   return (
-    <div className="container auth-page">
-      <div className="auth-decor auth-decor--mint" aria-hidden="true" />
-      <div className="auth-decor auth-decor--peach" aria-hidden="true" />
-      <div className="row justify-content-center">
-        <div className="col-12 col-md-8 col-lg-5">
+    <div className="auth-page">
+      <div className="auth-brand" aria-hidden="true">
+        <h2 className="auth-brand-statement">
+          Учись.<br />Расти.<br />Достигай.
+        </h2>
+        <p className="auth-brand-tagline">
+          Образовательная платформа — всё, что нужно для роста, в одном месте.
+        </p>
+        <div className="auth-brand-logo">StudyKit</div>
+      </div>
+      <div className="auth-form-side">
+        <div className="auth-form-wrap">
           <SignUpForm
             error={state.error}
             changeFormType={() => navigate("/signin")}

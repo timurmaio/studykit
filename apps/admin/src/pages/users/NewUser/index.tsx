@@ -58,7 +58,7 @@ class NewUser extends Component<NewUserProps, NewUserState> {
     }
   }
 
-  handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  handleSubmit = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
     const url = API_URL + '/api/admin/users'
 

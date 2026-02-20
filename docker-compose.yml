@@ -29,6 +29,8 @@ services:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_USER: studykit
       RABBITMQ_PASS: studykit
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change_me_please}
     volumes:
       - ./apps/backend:/app
     depends_on:
@@ -55,6 +57,8 @@ services:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_USER: studykit
       RABBITMQ_PASS: studykit
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change_me_please}
       WORKERS: CodeExecutorWorker,SolutionUpdater
     volumes:
       - ./apps/backend:/app
@@ -70,7 +74,7 @@ services:
       context: .
       dockerfile: apps/frontend/Dockerfile
     environment:
-      VITE_API_URL: http://localhost:3000
+      VITE_API_URL: http://localhost:3100
     volumes:
       - ./apps/frontend:/app/apps/frontend
       - frontend_node_modules:/app/apps/frontend/node_modules
@@ -93,7 +97,60 @@ services:
     ports:
       - "3001:3000"
 
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory-policy noeviction
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_v2:/data
+
+  api_v2:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      NODE_ENV: development
+      API_HOST: 0.0.0.0
+      API_PORT: 3100
+      DATABASE_URL: postgres://postgres:postgres@db:5432/studykit_development
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-replace_me_with_min_32_chars_secret}
+      JWT_ISSUER: studykit-api-v2
+      JWT_AUDIENCE: studykit-frontend
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3001
+      TRUST_PROXY: "false"
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "3100:3100"
+
+  worker_v2:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/studykit_development
+      REDIS_URL: redis://redis:6379
+      EXECUTOR_URL: http://executor_v2:3200
+    depends_on:
+      - db
+      - redis
+      - executor_v2
+
+  executor_v2:
+    build:
+      context: .
+      dockerfile: apps/executor/Dockerfile
+    environment:
+      EXECUTOR_HOST: 0.0.0.0
+      EXECUTOR_PORT: 3200
+    ports:
+      - "3200:3200"
+
 volumes:
   db_data_legacy:
   frontend_node_modules:
   admin_node_modules:
+  redis_data_v2:

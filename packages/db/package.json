@@ -1,0 +1,13 @@
+{
+  "name": "@studykit/db",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "^0.44.5"
+  }
+}

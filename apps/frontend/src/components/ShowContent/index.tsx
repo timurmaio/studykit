@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { API_URL, createAxios } from "../../config";
+import { SQL_HINTS } from "../../constants/sqlHints";
 import arrow from "./arrow-back.svg";
 import lection from "./lection.svg";
 import test from "./test.svg";
@@ -20,6 +21,8 @@ export function ShowContent() {
   const [checkingInformation, setCheckingInformation] = useState("");
   const [succeed, setSucceed] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isHintOpen, setIsHintOpen] = useState(false);
+  const [isHintCopied, setIsHintCopied] = useState(false);
   const pollingRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -37,6 +40,8 @@ export function ShowContent() {
     setAlert("");
     setCheckingInformation("");
     setSucceed(null);
+    setIsHintOpen(false);
+    setIsHintCopied(false);
     if (pollingRef.current !== null) {
       clearInterval(pollingRef.current);
       pollingRef.current = null;
@@ -92,7 +97,10 @@ export function ShowContent() {
       axios
         .get(`${API_URL}/api/courses/${id}/participants/${userId}/statistics`)
         .then((response: any) => {
-          const solvedRaw = Number(response?.data?.data?.solvedProblems);
+          const solvedRaw = Number(
+            response?.data?.data?.solvedProblems ??
+              response?.data?.data?.solved_problems
+          );
           const totalRaw = Number(response?.data?.data?.problems);
           const solved = Number.isFinite(solvedRaw) ? solvedRaw : 0;
           const total = Number.isFinite(totalRaw) ? totalRaw : 0;
@@ -169,6 +177,25 @@ export function ShowContent() {
           Array.isArray(errorText) ? errorText[0] : errorText || "Ошибка"
         );
       });
+  };
+
+  const sqlHint =
+    content?.type === "SqlProblemContent" && content.sqlProblemId
+      ? SQL_HINTS[content.sqlProblemId]
+      : undefined;
+
+  const copyHint = async () => {
+    if (!sqlHint) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(sqlHint);
+      setIsHintCopied(true);
+      window.setTimeout(() => setIsHintCopied(false), 1200);
+    } catch {
+      setIsHintCopied(false);
+    }
   };
 
   const passStatistics = isParticipating ? (
@@ -276,12 +303,32 @@ export function ShowContent() {
                       <label htmlFor="solutionTextarea" className="show-sql-label">
                         Введите сюда свое решение
                       </label>
-                      {content.sqlProblemId === 1 && (
-                        <div className="alert alert-info">
-                          Подсказка: в этой задаче нужно создать таблицу
-                          <strong> passengers</strong>, а не <strong>tickets</strong>.
+                      {sqlHint ? (
+                        <div className="show-sql-hint-wrap">
+                          <button
+                            type="button"
+                            className="show-sql-hint-toggle"
+                            onClick={() => setIsHintOpen((prev) => !prev)}
+                          >
+                            {isHintOpen ? "Скрыть подсказку" : "Показать подсказку"}
+                          </button>
+                          {isHintOpen ? (
+                            <div className="show-sql-hint-popover">
+                              <div className="show-sql-hint-header">
+                                <span>Правильный SQL</span>
+                                <button
+                                  type="button"
+                                  className="show-sql-copy"
+                                  onClick={copyHint}
+                                >
+                                  {isHintCopied ? "Скопировано" : "Скопировать"}
+                                </button>
+                              </div>
+                              <pre className="show-sql-hint-code">{sqlHint}</pre>
+                            </div>
+                          ) : null}
                         </div>
-                      )}
+                      ) : null}
                       <textarea
                         className="form-control mb-16 show-sql-textarea"
                         name="solution"

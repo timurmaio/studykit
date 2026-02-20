@@ -52,7 +52,7 @@ class Authentication extends Component<AuthenticationProps, AuthenticationState>
     this.setState({ [name]: value } as Pick<AuthenticationState, keyof AuthenticationState>)
   }
 
-  handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  handleSubmit = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
 
     const url = API_URL + '/api/users/login'

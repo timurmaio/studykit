@@ -35,7 +35,7 @@ class ShowCourse extends Component<ShowCourseProps, ShowCourseState> {
     })
   }
 
-  handleEdit = (event: React.FormEvent<HTMLFormElement>) => {
+  handleEdit = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
     this.setState({ editable: !this.state.editable })
   }
@@ -44,10 +44,10 @@ class ShowCourse extends Component<ShowCourseProps, ShowCourseState> {
     const target = event.target
     const name = target.name
     const value = target.value
-    this.setState({ [name]: value } as Pick<ShowCourseState, keyof ShowCourseState>)
+    this.setState({ [name]: value } as unknown as Pick<ShowCourseState, 'title' | 'description'>)
   }
 
-  handleEditSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  handleEditSubmit = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
     const url = API_URL + '/api/admin/courses/' + + this.props.params.id
 
