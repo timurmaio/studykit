@@ -1,0 +1,32 @@
+# Ruby/Bundler
+.bundle/
+vendor/bundle/
+vendor/cache/
+
+# Rails
+log/
+tmp/
+storage/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Capistrano
+release/
+revisions.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.rspec_status

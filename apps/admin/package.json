@@ -1,0 +1,31 @@
+{
+  "name": "studykit-admin",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.4.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "start": "vite",
+    "lint": "standard",
+    "fix": "standard --fix"
+  },
+  "dependencies": {
+    "axios": "^0.15.3",
+    "react": "^16.14.0",
+    "react-dom": "^16.14.0",
+    "react-router": "3.0.2",
+    "styled-components": "^3.4.10"
+  },
+  "devDependencies": {
+    "@types/react": "^15.0.0",
+    "@types/react-dom": "^15.0.0",
+    "@types/react-router": "^3.0.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "standard": "^10.0.0",
+    "typescript": "^4.6.4",
+    "vite": "^5.1.4"
+  }
+}

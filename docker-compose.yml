@@ -1,0 +1,99 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    environment:
+      RABBITMQ_DEFAULT_USER: studykit
+      RABBITMQ_DEFAULT_PASS: studykit
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  db:
+    image: postgres:9.6
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+    volumes:
+      - db_data_legacy:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./apps/backend
+    environment:
+      RAILS_ENV: development
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:-dev_secret_key_base_min_30_chars}
+      DATABASE_HOST: db
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: studykit
+      RABBITMQ_PASS: studykit
+    volumes:
+      - ./apps/backend:/app
+    depends_on:
+      - rabbitmq
+      - db
+    ports:
+      - "3000:3000"
+    command: >
+      sh -c "rm -f tmp/pids/server.pid &&
+             until bundle exec rails db:create db:migrate db:seed; do
+               echo 'DB is not ready yet, retrying in 2s...';
+               sleep 2;
+             done &&
+             bundle exec rails server -b 0.0.0.0 -p 3000"
+
+  sneakers:
+    build: ./apps/backend
+    environment:
+      RAILS_ENV: development
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:-dev_secret_key_base_min_30_chars}
+      DATABASE_HOST: db
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_USER: studykit
+      RABBITMQ_PASS: studykit
+      WORKERS: CodeExecutorWorker,SolutionUpdater
+    volumes:
+      - ./apps/backend:/app
+    depends_on:
+      - backend
+      - rabbitmq
+      - db
+    command: >
+      sh -c "bundle exec rake sneakers:run"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    environment:
+      VITE_API_URL: http://localhost:3000
+    volumes:
+      - ./apps/frontend:/app/apps/frontend
+      - frontend_node_modules:/app/apps/frontend/node_modules
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+    environment:
+      REACT_APP_API_URL: http://localhost:3000
+    volumes:
+      - ./apps/admin:/app/apps/admin
+      - admin_node_modules:/app/apps/admin/node_modules
+    depends_on:
+      - backend
+    ports:
+      - "3001:3000"
+
+volumes:
+  db_data_legacy:
+  frontend_node_modules:
+  admin_node_modules:

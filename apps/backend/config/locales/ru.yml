@@ -1,0 +1,25 @@
+ru:
+  exceptions:
+    unauthorized: "Необходимо войти на сайт"
+    forbidden: "У вас нет прав для совершения этого действия"
+  activerecord:
+    exceptions:
+      not_found: "Невозможно найти указанный %{klass}"
+    models:
+      course:
+        one: "Курс"
+        other: "Курсы"
+      sql_solution:
+        one: "Решение"
+        other: "Решения"
+    attributes:
+      sql_solution:
+        code: "Код решения"
+        sql_problem: "SQL-задание"
+  courses:
+    join:
+      success: "Вы успешно подписаны на курс"
+      fail: "Невозможно подписаться на курс"
+    leave:
+      success: "Вы успешно отписаны от курса"
+      fail: "Невозможно отписаться от курса"

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="12" height="12" viewBox="0 0 12 12">
+  <defs>
+    <rect id="person-b" width="1200" height="60"/>
+    <filter id="person-a" width="100.8%" height="116.7%" x="-.4%" y="-6.7%" filterUnits="objectBoundingBox">
+      <feOffset dy="1" in="SourceAlpha" result="shadowOffsetOuter1"/>
+      <feGaussianBlur in="shadowOffsetOuter1" result="shadowBlurOuter1" stdDeviation="1.5"/>
+      <feColorMatrix in="shadowBlurOuter1" values="0 0 0 0 0   0 0 0 0 0   0 0 0 0 0  0 0 0 0.1 0"/>
+    </filter>
+    <linearGradient id="person-c" x1="67.051%" x2="32.74%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#F94"/>
+      <stop offset="100%" stop-color="#FC6076"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" fill-rule="evenodd" transform="translate(-1048 -24)">
+    <use fill="#000" filter="url(#person-a)" xlink:href="#person-b"/>
+    <use fill="#FFF" xlink:href="#person-b"/>
+    <g fill="url(#person-c)" transform="translate(1038 20)">
+      <path d="M10.4615385,9.53846154 C11.785,9.53846154 13.2307692,8.29923077 13.2307692,6.76923077 C13.2307692,5.23923077 11.785,4 10.4615385,4 C8.215,4 6.76923077,5.23923077 6.76923077,6.76923077 C6.76923077,8.29923077 8.215,9.53846154 10.4615385,9.53846154 Z M10.4615385,11.3846154 C7.9975,11.3846154 4,12.4153846 4,14.1538462 L4,16 L16,16 L16,14.1538462 C16,12.4153846 12.0025,11.3846154 10.4615385,11.3846154 Z" transform="translate(6)"/>
+    </g>
+  </g>
+</svg>
