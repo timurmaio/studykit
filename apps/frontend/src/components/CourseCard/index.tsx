@@ -16,14 +16,12 @@ export function CourseCard(props: Props) {
 
   return (
     <Link to={`/courses/${id}`} className="link link--black">
-      <div className="card course-card">
-        <img className="card_image" src={avatarSrc} alt="Изображение курса" />
-        <div className="card_body">
+      <div className="course-card">
+        <img className="course-card__img" src={avatarSrc} alt="Изображение курса" />
+        <div className="course-card__overlay">
           {type ? <span className="course-card-badge">{type}</span> : null}
-          <header className="card_title course-card-title">{title}</header>
-          <p className="card_description course-card-description">
-            {description}
-          </p>
+          <h3 className="course-card-title">{title}</h3>
+          <p className="course-card-description">{description}</p>
         </div>
       </div>
     </Link>

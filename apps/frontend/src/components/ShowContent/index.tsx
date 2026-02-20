@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { API_URL, createAxios } from "../../config";
@@ -20,6 +20,7 @@ export function ShowContent() {
   const [checkingInformation, setCheckingInformation] = useState("");
   const [succeed, setSucceed] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const pollingRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!id || !lectureId || !contentId) {
@@ -32,6 +33,14 @@ export function ShowContent() {
     const currentContentId = Number(contentId);
     const visitedStorageKey = `visited_content_ids_${courseId}`;
     setIsLoading(true);
+    setSolution("");
+    setAlert("");
+    setCheckingInformation("");
+    setSucceed(null);
+    if (pollingRef.current !== null) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
 
     const savedVisited = localStorage.getItem(visitedStorageKey);
     let parsedVisited: number[] = [];
@@ -97,6 +106,12 @@ export function ShowContent() {
           setStatistics(0);
         });
     }
+    return () => {
+      if (pollingRef.current !== null) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
   }, [id, lectureId, contentId]);
 
   const checkTheSolution = (event: any) => {
@@ -109,6 +124,10 @@ export function ShowContent() {
     setAlert("");
     setCheckingInformation("");
     setSucceed(null);
+    if (pollingRef.current !== null) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
 
     axios
       .post(`${API_URL}/api/sql_solutions`, {
@@ -125,7 +144,7 @@ export function ShowContent() {
         const solutionId = response.data.id;
         setCheckingInformation("Идёт проверка...");
 
-        const waitingForSolution = setInterval(() => {
+        const waitingForSolution = window.setInterval(() => {
           axios
             .get(`${API_URL}/api/sql_solutions/${solutionId}`)
             .then((pollRes: any) => {
@@ -133,13 +152,16 @@ export function ShowContent() {
                 setCheckingInformation("Решение верно!");
                 setSucceed(true);
                 clearInterval(waitingForSolution);
+                pollingRef.current = null;
               } else if (pollRes.data.succeed === false) {
                 setCheckingInformation("Решение неверно, попробуйте ещё раз!");
                 setSucceed(false);
                 clearInterval(waitingForSolution);
+                pollingRef.current = null;
               }
             });
         }, 1000);
+        pollingRef.current = waitingForSolution;
       })
       .catch((error: any) => {
         const errorText = error?.response?.data?.errors;
@@ -154,14 +176,6 @@ export function ShowContent() {
       Прогресс по курсу: <strong>{statistics}%</strong>
     </p>
   ) : null;
-
-  if (isLoading) {
-    return (
-      <div className="container show-page">
-        <div className="panel course-skeleton">Загружаем материал...</div>
-      </div>
-    );
-  }
 
   if (!course) {
     return null;
@@ -241,62 +255,68 @@ export function ShowContent() {
         </div>
         <div className="col-12 col-lg-8">
           <div className="panel show-content-panel">
-            <header className="ml-32 mt-24 fs-24 mb-20 show-content-title">
-              {content?.title || course.title}
-            </header>
-            {content?.body ? (
-              <div className="mx-32 show-markdown">
-                <ReactMarkdown>{content.body}</ReactMarkdown>
-              </div>
-            ) : null}
-            {contentError ? (
-              <div className="alert alert-warning mx-32">{contentError}</div>
-            ) : null}
-            <div className="form-group mx-32">
-              {content?.type === "SqlProblemContent" && (
-                <form className="show-sql-form">
-                  <label htmlFor="solutionTextarea" className="show-sql-label">
-                    Введите сюда свое решение
-                  </label>
-                  {content.sqlProblemId === 1 && (
-                    <div className="alert alert-info">
-                      Подсказка: в этой задаче нужно создать таблицу
-                      <strong> passengers</strong>, а не <strong>tickets</strong>.
-                    </div>
+            {isLoading ? (
+              <div className="mx-32 mt-24">Загружаем материал...</div>
+            ) : (
+              <>
+                <header className="ml-32 mt-24 fs-24 mb-20 show-content-title">
+                  {content?.title || course.title}
+                </header>
+                {content?.body ? (
+                  <div className="mx-32 show-markdown">
+                    <ReactMarkdown>{content.body}</ReactMarkdown>
+                  </div>
+                ) : null}
+                {contentError ? (
+                  <div className="alert alert-warning mx-32">{contentError}</div>
+                ) : null}
+                <div className="form-group mx-32">
+                  {content?.type === "SqlProblemContent" && (
+                    <form className="show-sql-form">
+                      <label htmlFor="solutionTextarea" className="show-sql-label">
+                        Введите сюда свое решение
+                      </label>
+                      {content.sqlProblemId === 1 && (
+                        <div className="alert alert-info">
+                          Подсказка: в этой задаче нужно создать таблицу
+                          <strong> passengers</strong>, а не <strong>tickets</strong>.
+                        </div>
+                      )}
+                      <textarea
+                        className="form-control mb-16 show-sql-textarea"
+                        name="solution"
+                        id="solutionTextarea"
+                        rows={6}
+                        value={solution}
+                        onChange={(event) => setSolution(event.target.value)}
+                      />
+                      <button
+                        className="button mb-16 show-sql-button"
+                        onClick={checkTheSolution}
+                      >
+                        Отправить решение
+                      </button>
+                      {alert ? (
+                        <div className="alert alert-danger">{alert}</div>
+                      ) : null}
+                      {checkingInformation ? (
+                        <div
+                          className={`alert ${
+                            succeed === true
+                              ? "alert-success"
+                              : succeed === false
+                              ? "alert-danger"
+                              : "alert-info"
+                          }`}
+                        >
+                          {checkingInformation}
+                        </div>
+                      ) : null}
+                    </form>
                   )}
-                  <textarea
-                    className="form-control mb-16 show-sql-textarea"
-                    name="solution"
-                    id="solutionTextarea"
-                    rows={6}
-                    value={solution}
-                    onChange={(event) => setSolution(event.target.value)}
-                  />
-                  <button
-                    className="button mb-16 show-sql-button"
-                    onClick={checkTheSolution}
-                  >
-                    Отправить решение
-                  </button>
-                  {alert ? (
-                    <div className="alert alert-danger">{alert}</div>
-                  ) : null}
-                  {checkingInformation ? (
-                    <div
-                      className={`alert ${
-                        succeed === true
-                          ? "alert-success"
-                          : succeed === false
-                          ? "alert-danger"
-                          : "alert-info"
-                      }`}
-                    >
-                      {checkingInformation}
-                    </div>
-                  ) : null}
-                </form>
-              )}
-            </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
