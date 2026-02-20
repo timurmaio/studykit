@@ -23,7 +23,12 @@ export function App(): JSX.Element {
       try {
         fetch(`${API_URL}/api/users/${userId}`)
           .then((res) => res.json())
-          .then((data) => setState({ ...state, user: data }));
+          .then((data) =>
+            setState((prev) => ({
+              ...prev,
+              user: data,
+            }))
+          );
       } catch {
         localStorage.removeItem("jwt_token");
         localStorage.removeItem("user_id");

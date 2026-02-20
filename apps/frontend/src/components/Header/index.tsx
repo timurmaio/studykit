@@ -25,17 +25,28 @@ export function Header(props: Props) {
   const signed = localStorage.getItem("jwt_token");
 
   const signButton = signed ? (
-    <button type="button" onClick={handleSignOut} className="button">
+    <button
+      type="button"
+      onClick={handleSignOut}
+      className="button button--ghost header-action"
+    >
       Выйти
     </button>
   ) : (
-    <button type="button" onClick={handleSignIn} className="button">
+    <button
+      type="button"
+      onClick={handleSignIn}
+      className="button header-action"
+    >
       Войти
     </button>
   );
 
   const linkToProfile = signed ? (
-    <Link to="/profile" className="link link--profile flex align-items-center">
+    <Link
+      to="/profile"
+      className="link link--profile header-profile-link flex align-items-center"
+    >
       <img src={person} width="12px" className="mr-4" alt="" />
       <span className="mr-4">Профиль</span>
     </Link>
@@ -44,7 +55,7 @@ export function Header(props: Props) {
   const linkToLearning = signed ? (
     <NavLink
       to="/learning"
-      className={({ isActive }) =>
+      className={({ isActive }: { isActive: boolean }) =>
         isActive ? "nav-link nav-link--active" : "nav-link mr-4"
       }
     >
@@ -53,7 +64,7 @@ export function Header(props: Props) {
   ) : null;
 
   const userName = signed ? (
-    <span style={{ lineHeight: "32px", marginRight: "16px" }}>
+    <span className="header-user-name">
       {firstName} {lastName}
     </span>
   ) : null;
@@ -66,7 +77,7 @@ export function Header(props: Props) {
             {linkToLearning}
             <NavLink
               to="/courses"
-              className={({ isActive }) =>
+              className={({ isActive }: { isActive: boolean }) =>
                 isActive ? "nav-link nav-link--active" : "nav-link"
               }
             >
@@ -77,7 +88,7 @@ export function Header(props: Props) {
           <span className="top-panel_logo">StudyKit</span>
 
           <div className="top-panel_profile">
-            {/*{linkToProfile}*/}
+            {linkToProfile}
             {userName}
             {signButton}
           </div>

@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 interface Props {
   handleSubmit: (event: SyntheticEvent) => void;
   handleChange: (event: SyntheticEvent) => void;
-  changeFormType: (event: SyntheticEvent) => void;
+  changeFormType: () => void;
   error: string;
 }
 
@@ -14,10 +14,13 @@ export function SignUpForm(props: Props) {
   return (
     <form
       id="signup-form"
-      className="auth-form shadow mt-20"
+      className="auth-form auth-card"
       onSubmit={handleSubmit}
     >
-      <header className="auth-form_head mb-24">Регистрация</header>
+      <header className="auth-form_head mb-8">Создать аккаунт</header>
+      <p className="auth-form_subhead mb-24">
+        Начни проходить курсы и отмечать прогресс
+      </p>
 
       <label className="auth-form_label" htmlFor="firstName">
         Имя:
@@ -71,20 +74,26 @@ export function SignUpForm(props: Props) {
         required
       />
 
-      <button id="signup-form-submit" className="button mr-20" type="submit">
+      <button
+        id="signup-form-submit"
+        className="button auth-form_submit mr-16"
+        type="submit"
+      >
         Зарегистрироваться
       </button>
 
       <Link
         to="/signin"
         id="signup-form-change"
-        className="button button--auth-change"
+        className="button button--auth-change auth-form_switch"
         onClick={changeFormType}
       >
         Вход
       </Link>
 
-      <div className="alert">{error}</div>
+      {error ? (
+        <div className="alert alert-warning mt-16 mb-0">{error}</div>
+      ) : null}
     </form>
   );
 }

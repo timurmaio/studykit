@@ -29,7 +29,7 @@ function NewCourse() {
       },
     };
 
-    axios.post(url, data).then((response) => {
+    axios.post(url, data).then((response: any) => {
       if (response.status === 201) {
         console.log("Контент успешно создан");
         navigate(`/courses/${courseId}`);
@@ -38,58 +38,75 @@ function NewCourse() {
   };
 
   const handleInputChange = (event: SyntheticEvent) => {
-    const target = event.target as HTMLInputElement;
+    const target = event.target as
+      | HTMLInputElement
+      | HTMLTextAreaElement
+      | HTMLSelectElement;
     const name = target.name;
     const value = target.value;
     setState({ ...state, [name]: value });
   };
 
   return (
-    <form>
-      <div className="form-group">
-        <label htmlFor="exampleInputEmail1">Название</label>
+    <form className="new-content-form" onSubmit={handleSubmit}>
+      <div className="form-group mb-16">
+        <label htmlFor="new-content-title" className="auth-form_label">
+          Название
+        </label>
         <input
           type="text"
           name="title"
           className="form-control"
-          id="exampleInputEmail1"
-          aria-describedby="emailHelp"
+          id="new-content-title"
           placeholder="Название лекции"
           onChange={handleInputChange}
         />
-        <small id="emailHelp" className="form-text text-muted">
-          Мелкий шрифт
-        </small>
       </div>
 
-      <div className="form-group">
-        <label htmlFor="exampleInputEmail1">Порядковый номер</label>
+      <div className="form-group mb-16">
+        <label htmlFor="new-content-serial" className="auth-form_label">
+          Порядковый номер
+        </label>
         <input
           type="text"
           name="serial"
           className="form-control"
-          id="exampleInputEmail1"
-          aria-describedby="emailHelp"
-          placeholder="Название лекции"
+          id="new-content-serial"
+          placeholder="Например: 3"
           onChange={handleInputChange}
         />
-        <small id="emailHelp" className="form-text text-muted">
-          Мелкий шрифт
-        </small>
       </div>
 
-      <div className="form-group">
-        <label htmlFor="exampleTextarea">Тело</label>
+      <div className="form-group mb-16">
+        <label htmlFor="new-content-type" className="auth-form_label">
+          Тип контента
+        </label>
+        <select
+          className="form-control"
+          name="type"
+          id="new-content-type"
+          value={state.type}
+          onChange={handleInputChange}
+        >
+          <option value="MarkdownContent">Лекция</option>
+          <option value="SqlProblemContent">Практика SQL</option>
+        </select>
+      </div>
+
+      <div className="form-group mb-20">
+        <label htmlFor="new-content-body" className="auth-form_label">
+          Содержимое
+        </label>
         <textarea
           className="form-control"
           name="body"
-          id="exampleTextarea"
-          rows={3}
+          id="new-content-body"
+          rows={6}
           onChange={handleInputChange}
         />
       </div>
 
-      <button type="submit" className="btn btn-success" onClick={handleSubmit}>
+      <button type="submit" className="button auth-form_submit">
         Создать
       </button>
     </form>

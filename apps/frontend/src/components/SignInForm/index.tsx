@@ -12,10 +12,13 @@ export function SignInForm(props: Props) {
   return (
     <form
       id="signin-form"
-      className="auth-form shadow mt-40"
+      className="auth-form auth-card"
       onSubmit={handleSubmit}
     >
-      <header className="auth-form_head mb-24">Вход в систему</header>
+      <header className="auth-form_head mb-8">С возвращением</header>
+      <p className="auth-form_subhead mb-24">
+        Войдите, чтобы продолжить обучение
+      </p>
 
       <label className="auth-form_label" htmlFor="email">
         Электронная почта:
@@ -43,19 +46,25 @@ export function SignInForm(props: Props) {
         required
       />
 
-      <button id="signin-form-submit" className="button mr-20" type="submit">
+      <button
+        id="signin-form-submit"
+        className="button auth-form_submit mr-16"
+        type="submit"
+      >
         Войти
       </button>
 
       <Link
         to="/signup"
         id="signin-form-change"
-        className="button button--auth-change"
+        className="button button--auth-change auth-form_switch"
       >
         Регистрация
       </Link>
 
-      <div className="alert">{error}</div>
+      {error ? (
+        <div className="alert alert-warning mt-16 mb-0">{error}</div>
+      ) : null}
     </form>
   );
 }

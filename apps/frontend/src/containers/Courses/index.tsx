@@ -21,8 +21,19 @@ export function Courses() {
   }
 
   return (
-    <div className="container">
-      <div className="row">{courses.map(renderCourseCard)}</div>
+    <div className="container courses-page">
+      <header className="courses-hero mb-24">
+        <p className="courses-kicker mb-8">StudyKit</p>
+        <h1 className="courses-title mb-8">Каталог курсов</h1>
+        <p className="courses-subtitle mb-0">
+          Выбирай траекторию и отмечай прогресс по мере прохождения уроков.
+        </p>
+      </header>
+      {courses.length ? (
+        <div className="row">{courses.map(renderCourseCard)}</div>
+      ) : (
+        <div className="panel courses-empty">Курсы скоро появятся</div>
+      )}
     </div>
   );
 }

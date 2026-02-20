@@ -12,8 +12,9 @@ export function Course() {
   const [course, setCourse] = useState<CourseItem | null>(null);
   const [isParticipating, setIsParticipating] = useState<boolean | null>(null);
   const [alert, setAlert] = useState("");
-  const [statistics, setStatistics] = useState(0);
   const [visitedContentIds, setVisitedContentIds] = useState<number[]>([]);
+  const [isCourseLoading, setIsCourseLoading] = useState(true);
+  const [courseError, setCourseError] = useState("");
 
   useEffect(() => {
     if (!id) {
@@ -21,40 +22,45 @@ export function Course() {
     }
 
     const axios = createAxios();
-    const userId = localStorage.getItem("user_id");
     const courseId = Number(id);
 
-    const savedVisited = localStorage.getItem(`visited_content_ids_${courseId}`);
-    setVisitedContentIds(savedVisited ? JSON.parse(savedVisited) : []);
+    const savedVisited = localStorage.getItem(
+      `visited_content_ids_${courseId}`
+    );
+    if (savedVisited) {
+      try {
+        setVisitedContentIds(JSON.parse(savedVisited));
+      } catch {
+        setVisitedContentIds([]);
+      }
+    } else {
+      setVisitedContentIds([]);
+    }
 
-    axios.get(`${API_URL}/api/courses/${id}`).then((response) => {
-      setCourse(response.data);
-    });
+    setIsCourseLoading(true);
+    setCourseError("");
+
+    axios
+      .get(`${API_URL}/api/courses/${id}`)
+      .then((response: any) => {
+        setCourse(response.data);
+      })
+      .catch(() => {
+        setCourseError("Не удалось загрузить страницу курса");
+      })
+      .finally(() => {
+        setIsCourseLoading(false);
+      });
 
     axios
       .get(`${API_URL}/api/courses/${id}/participating`)
-      .then((response) => {
+      .then((response: any) => {
         setIsParticipating(response.data.participating);
       })
       .catch(() => {
         setIsParticipating(null);
       });
 
-    if (userId) {
-      axios
-        .get(`${API_URL}/api/courses/${id}/participants/${userId}/statistics`)
-        .then((response) => {
-          const solved = response.data.data.solvedProblems;
-          const total = response.data.data.problems;
-          const courseStatistics = total
-            ? Math.round((solved / total) * 100)
-            : 0;
-          setStatistics(courseStatistics);
-        })
-        .catch(() => {
-          setStatistics(0);
-        });
-    }
   }, [id]);
 
   const joinCourse = () => {
@@ -69,7 +75,7 @@ export function Course() {
         setIsParticipating(true);
         setAlert("");
       })
-      .catch((error) => {
+      .catch((error: any) => {
         setAlert(error?.response?.data?.errors || "Не удалось подписаться");
       });
   };
@@ -86,15 +92,19 @@ export function Course() {
         setIsParticipating(false);
         setAlert("");
       })
-      .catch((error) => {
+      .catch((error: any) => {
         setAlert(error?.response?.data?.errors || "Не удалось отписаться");
       });
   };
 
   const checkAccessToContent = (event: SyntheticEvent) => {
-    if (isParticipating === false) {
+    if (isParticipating !== true) {
       event.preventDefault();
-      setAlert("Вы не подписаны на курс");
+      setAlert(
+        isParticipating === false
+          ? "Вы не подписаны на курс"
+          : "Не удалось проверить подписку. Попробуйте позже"
+      );
     }
   };
   const joinButton = isParticipating ? (
@@ -111,70 +121,117 @@ export function Course() {
     <div className="alert alert-warning">{alert}</div>
   ) : null;
 
-  const passStatistics = statistics ? (
-    isParticipating ? (
-      <p>
-        <>Курс пройден на {statistics}%</>
-      </p>
-    ) : null
-  ) : null;
+  if (isCourseLoading) {
+    return (
+      <div className="container course-page">
+        <div className="panel course-skeleton">Загружаем курс...</div>
+      </div>
+    );
+  }
+
+  if (courseError) {
+    return (
+      <div className="container course-page">
+        <div className="alert alert-warning">{courseError}</div>
+      </div>
+    );
+  }
 
   if (!course) {
     return null;
   }
 
   const avatarSrc = course.avatar || defaultCourseAvatar;
+  const rawCreatedAt = Number(course.createdAt);
+  const createdAtMilliseconds =
+    Number.isFinite(rawCreatedAt) && rawCreatedAt < 10_000_000_000
+      ? rawCreatedAt * 1000
+      : rawCreatedAt;
+  const createdDate = Number.isFinite(createdAtMilliseconds)
+    ? new Date(createdAtMilliseconds).toLocaleDateString("ru-RU")
+    : String(course.createdAt);
+  const totalLessons = course.lectures.reduce(
+    (accumulator, lecture) => accumulator + lecture.content.length,
+    0
+  );
+  const solvedIds = Array.isArray(course.solvedIds) ? course.solvedIds : [];
+  const completedLessonIds = Array.from(
+    new Set([...visitedContentIds, ...solvedIds])
+  );
+  const learningProgress = totalLessons
+    ? Math.round((completedLessonIds.length / totalLessons) * 100)
+    : 0;
+  const passStatistics = isParticipating ? (
+    <p className="course-progress-text">
+      Прогресс по курсу: <strong>{learningProgress}%</strong>
+    </p>
+  ) : null;
 
   return (
-    <div className="container">
+    <div className="container course-page">
+      <div className="course-decor course-decor--mint" aria-hidden="true" />
+      <div className="course-decor course-decor--peach" aria-hidden="true" />
       <div className="row">
-        <div className="col-4">
-          <div className="panel h-600">
-              <img
-                src={avatarSrc}
-                className="course-img mb-24"
-                alt="Изображние курса"
-                width="350px"
-              height="200px"
+        <div className="col-12 col-lg-4 mb-24">
+          <div className="panel course-overview">
+            <img
+              src={avatarSrc}
+              className="course-img mb-24"
+              alt="Изображение курса"
             />
-            <div className="mx-32">
+            <div className="mx-32 course-overview-content">
+              <div className="course-chip-row mb-16">
+                <span className="course-chip">{course.type}</span>
+                <span className="course-chip">{totalLessons} уроков</span>
+              </div>
               {passStatistics}
               {joinButton}
               {Alert}
-              <p className="mb-16 fs-20">{course.description}</p>
-              <p className="mb-8">
+              <p className="mb-16 course-description">{course.description}</p>
+              <p className="mb-8 course-meta">
                 Автор: {course.owner.firstName} {course.owner.lastName}
               </p>
-              <p className="mb-8">Дата создания: {course.createdAt}</p>
-              <p className="mb-0">Теги: #programming #database</p>
+              <p className="mb-8 course-meta">Дата создания: {createdDate}</p>
+              <p className="mb-0 course-meta">Формат: практика + лекции</p>
             </div>
           </div>
         </div>
-        <div className="col-8">
-          <div className="panel h-600">
-            <header className="ml-32 mt-24 fs-24 mb-20">{course.title}</header>
+        <div className="col-12 col-lg-8">
+          <div className="panel course-roadmap">
+            <header className="ml-32 mt-24 fs-24 mb-20 course-title">
+              {course.title}
+            </header>
 
             {course.lectures.map((lecture) => {
               return (
-                <div className="mb-16" key={lecture.id}>
-                  <p className="fs-20 mx-32 mb-0">{lecture.title}</p>
-                  <hr className="hr mx-32  my-4" />
+                <div
+                  className="mx-32 mb-20 course-lecture-card"
+                  key={lecture.id}
+                >
+                  <p className="fs-20 mb-8 course-lecture-title">
+                    {lecture.title}
+                  </p>
                   {lecture.content.map((content) => {
                     const contentIcon =
                       content.type === "MarkdownContent" ? lection : test;
                     const isVisited = visitedContentIds.includes(content.id);
-                    const isSolved = course.solvedIds.includes(content.id);
+                    const isSolved = solvedIds.includes(content.id);
                     const isDone = isVisited || isSolved;
                     return (
                       <Link
+                        key={content.id}
                         to={`/courses/${id}/lectures/${lecture.id}/contents/${content.id}`}
-                        className="link"
+                        className={`link course-lesson ${
+                          isDone ? "course-lesson--done" : ""
+                        }`}
                         onClick={checkAccessToContent}
                       >
-                        <div className="mx-32 list-item" key={content.id}>
+                        <div className="list-item course-lesson-row">
                           {isParticipating && (
                             <span
-                              className={`circle ${isDone ? "circle--green" : ""} ml-8 mr-16`}
+                              className={`circle ${
+                                isDone ? "circle--green" : ""
+                              } ml-8 mr-16`}
                             />
                           )}
                           <img
@@ -182,16 +239,14 @@ export function Course() {
                             className="mr-16"
                             alt="Иконка контента"
                           />
-                          {content.title}
+                          <span className="course-lesson-title">
+                            {content.title}
+                          </span>
                           {isParticipating && isDone && (
-                            <span
-                              className="ml-16 fs-12"
-                              style={{ fontWeight: "200", color: "gray" }}
-                            >
+                            <span className="ml-16 fs-12 course-lesson-status">
                               Пройдено
                             </span>
                           )}
-                          <hr className="hr my-4" />
                         </div>
                       </Link>
                     );

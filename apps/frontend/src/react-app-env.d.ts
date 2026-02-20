@@ -1,1 +1,6 @@
-/// <reference types="react-scripts" />
+/// <reference types="vite/client" />
+
+declare module "*.svg" {
+  const src: string;
+  export default src;
+}

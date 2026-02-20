@@ -37,7 +37,7 @@ export function SignIn() {
 
     axios
       .post(url, signInData)
-      .then((response) => {
+      .then((response: any) => {
         if (response.status === 200) {
           console.log("Залогинились!");
           localStorage.setItem("jwt_token", response.data.jwtToken);
@@ -45,15 +45,17 @@ export function SignIn() {
           navigate("/courses");
         }
       })
-      .catch((error) => {
+      .catch((error: any) => {
         setState({ ...state, error: error.response.data.errors });
       });
   };
 
   return (
-    <div className="container">
-      <div className="row">
-        <div className="col-4 offset-4">
+    <div className="container auth-page">
+      <div className="auth-decor auth-decor--mint" aria-hidden="true" />
+      <div className="auth-decor auth-decor--peach" aria-hidden="true" />
+      <div className="row justify-content-center">
+        <div className="col-12 col-md-8 col-lg-5">
           <SignInForm
             error={state.error}
             handleChange={handleChange}

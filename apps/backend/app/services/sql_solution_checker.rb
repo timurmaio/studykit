@@ -14,7 +14,7 @@ class SqlSolutionChecker
     def execute_statement(sql)
       return [] if sql.to_s.strip.empty?
 
-      stdout, stderr, status = Open3.capture3('sqlite3', '-batch', '-noheader', @db_path, sql)
+      stdout, stderr, status = Open3.capture3('sqlite3', '-batch', '-header', @db_path, sql)
       raise(StandardError, stderr.to_s.strip) unless status.success?
 
       stdout.lines.map do |line|
@@ -26,8 +26,8 @@ class SqlSolutionChecker
 
     def cast(value)
       return nil if value.nil?
-      return value.to_i if value.match?(/\A-?\d+\z/)
-      return value.to_f if value.match?(/\A-?\d+\.\d+\z/)
+      return value.to_i if value =~ /\A-?\d+\z/
+      return value.to_f if value =~ /\A-?\d+\.\d+\z/
 
       value
     end
