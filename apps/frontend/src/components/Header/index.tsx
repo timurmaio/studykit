@@ -9,6 +9,7 @@ interface Props {
   user: {
     firstName: string;
     lastName: string;
+    role?: string;
   };
   isSigned: boolean;
   onSignOut: () => void;
@@ -100,6 +101,18 @@ export function Header(props: Props) {
     </NavLink>
   ) : null;
 
+  const linkToTeaching =
+    isSigned && (props.user.role === "teacher" || props.user.role === "admin") ? (
+      <NavLink
+        to="/teaching"
+        className={({ isActive }: { isActive: boolean }) =>
+          isActive ? "nav-link nav-link--active" : "nav-link mr-1"
+        }
+      >
+        Преподавание
+      </NavLink>
+    ) : null;
+
   const userName = isSigned ? (
     <span className="header-user-name">
       {firstName} {lastName}
@@ -112,6 +125,7 @@ export function Header(props: Props) {
         <div className="top-panel_content">
           <nav className="top-panel_nav">
             {linkToLearning}
+            {linkToTeaching}
             <NavLink
               to="/courses"
               className={({ isActive }: { isActive: boolean }) =>

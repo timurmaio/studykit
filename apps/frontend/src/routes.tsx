@@ -18,6 +18,9 @@ import { Course } from "./components/Course";
 import { ShowContent } from "./components/ShowContent";
 import { NotFound } from "./components/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { TeacherRoute } from "./components/TeacherRoute";
+import { Teaching } from "./containers/Teaching";
+import { NewCourse } from "./components/NewCourse";
 import type { CourseItem } from "./types/Course";
 
 function RootLayout() {
@@ -138,6 +141,14 @@ export const router = createBrowserRouter([
         loader: courseLoader,
       },
       {
+        path: "courses/:id/teach",
+        element: (
+          <TeacherRoute>
+            <NewCourse />
+          </TeacherRoute>
+        ),
+      },
+      {
         path: "courses/:id/lectures/:lectureId/contents/:contentId",
         element: <ShowContent />,
       },
@@ -153,11 +164,10 @@ export const router = createBrowserRouter([
       {
         path: "teaching",
         element: (
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
+          <TeacherRoute>
+            <Teaching />
+          </TeacherRoute>
         ),
-        loader: profileLoader,
       },
       { path: "*", element: <NotFound /> },
     ],

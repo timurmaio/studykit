@@ -10,6 +10,7 @@ export function App() {
         user={{
           firstName: user?.firstName ?? "",
           lastName: user?.lastName ?? "",
+          role: user?.role,
         }}
         isSigned={isAuthenticated}
         onSignOut={signOut}

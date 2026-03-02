@@ -8,11 +8,14 @@ import {
 } from "react";
 import { apiGet, apiPost } from "../config";
 
+export type Role = "student" | "admin" | "teacher";
+
 interface User {
   id: number;
   firstName: string;
   lastName: string;
   email?: string;
+  role?: Role;
 }
 
 interface AuthContextValue {

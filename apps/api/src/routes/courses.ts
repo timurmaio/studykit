@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, max } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db";
 import {
@@ -11,11 +11,13 @@ import {
   userGroups,
   sqlSolutions,
   sqlProblemContents,
+  sqlProblems,
   markdownContents,
   videoContents,
   userLectureProgress,
 } from "@studykit/db/schema";
 import { authMiddleware } from "../middleware/auth";
+import { authorize } from "../middleware/auth";
 import { roleFromDbRole } from "../lib/jwt";
 
 function resolveCourseAvatar(baseUrl: string, courseId: number, avatar: string | null) {
@@ -99,6 +101,231 @@ courseRoutes.get("/", async (c) => {
       },
     }))
   );
+});
+
+const createCourseSchema = z.object({
+  course: z.object({
+    title: z.string().min(1),
+    description: z.string().optional(),
+  }),
+});
+
+courseRoutes.post("/", authMiddleware, authorize("teacher", "admin"), async (c) => {
+  const body = await c.req.json().catch(() => null);
+  const parsed = createCourseSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ errors: ["Invalid payload: title is required"] }, 400);
+  }
+
+  const auth = c.get("auth");
+  const now = new Date();
+
+  const [newCourse] = await db
+    .insert(courses)
+    .values({
+      title: parsed.data.course.title,
+      description: parsed.data.course.description ?? null,
+      ownerId: auth.userId,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning({ id: courses.id });
+
+  if (!newCourse) {
+    return c.json({ errors: ["Failed to create course"] }, 500);
+  }
+
+  await db.insert(groups).values({
+    courseId: newCourse.id,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  await db.insert(lectures).values({
+    title: "Введение",
+    courseId: newCourse.id,
+    serialNumber: 1,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  return c.json({ id: newCourse.id, title: parsed.data.course.title }, 201);
+});
+
+const createContentSchema = z.object({
+  course_content: z.object({
+    lecture_id: z.number().int().positive(),
+    title: z.string().min(1),
+    body: z.string(),
+    serial_number: z.union([z.number().int().min(0), z.string()]).optional(),
+    type: z.enum(["MarkdownContent", "SqlProblemContent"]),
+    initial_code: z.string().optional(),
+    solution_code: z.string().optional(),
+  }),
+});
+
+courseRoutes.post("/:id/content", authMiddleware, authorize("teacher", "admin"), async (c) => {
+  const parsedId = courseIdSchema.safeParse(c.req.param("id"));
+  if (!parsedId.success) {
+    return c.json({ errors: ["Invalid course id"] }, 400);
+  }
+
+  const body = await c.req.json().catch(() => null);
+  const parsed = createContentSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ errors: ["Invalid payload"] }, 400);
+  }
+
+  const auth = c.get("auth");
+  const { lecture_id, title, body: contentBody, serial_number, type } = parsed.data.course_content;
+  const serialNumber = typeof serial_number === "string" ? parseInt(serial_number, 10) || 0 : (serial_number ?? 0);
+
+  const [course] = await db
+    .select({ id: courses.id, ownerId: courses.ownerId })
+    .from(courses)
+    .where(eq(courses.id, parsedId.data))
+    .limit(1);
+
+  if (!course || course.ownerId !== auth.userId) {
+    return c.json({ errors: ["Course not found or access denied"] }, 404);
+  }
+
+  const [lecture] = await db
+    .select({ id: lectures.id })
+    .from(lectures)
+    .where(and(eq(lectures.courseId, parsedId.data), eq(lectures.id, lecture_id)))
+    .limit(1);
+
+  if (!lecture) {
+    return c.json({ errors: ["Lecture not found"] }, 404);
+  }
+
+  const now = new Date();
+
+  if (type === "MarkdownContent") {
+    const [mdContent] = await db
+      .insert(markdownContents)
+      .values({ title, body: contentBody })
+      .returning({ id: markdownContents.id });
+
+    if (!mdContent) return c.json({ errors: ["Failed to create content"] }, 500);
+
+    const [lc] = await db
+      .insert(lectureContents)
+      .values({
+        actableType: "MarkdownContent",
+        lectureId: lecture.id,
+        actableId: mdContent.id,
+        serialNumber,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning({ id: lectureContents.id });
+
+    return c.json({ id: lc?.id, type: "MarkdownContent" }, 201);
+  }
+
+  if (type === "SqlProblemContent") {
+    const { initial_code, solution_code } = parsed.data.course_content;
+    const initCode = initial_code ?? "SELECT 1;";
+    const solCode = solution_code ?? "SELECT 1;";
+
+    const [sqlProblem] = await db
+      .insert(sqlProblems)
+      .values({
+        initialCode: initCode,
+        solutionCode: solCode,
+        checkFunction: null,
+        executable: true,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning({ id: sqlProblems.id });
+
+    if (!sqlProblem) return c.json({ errors: ["Failed to create SQL problem"] }, 500);
+
+    const [sqlContent] = await db
+      .insert(sqlProblemContents)
+      .values({
+        title,
+        body: contentBody.slice(0, 255),
+        sqlProblemId: sqlProblem.id,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning({ id: sqlProblemContents.id });
+
+    if (!sqlContent) return c.json({ errors: ["Failed to create SQL content"] }, 500);
+
+    const [lc] = await db
+      .insert(lectureContents)
+      .values({
+        actableType: "SqlProblemContent",
+        lectureId: lecture.id,
+        actableId: sqlContent.id,
+        serialNumber,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning({ id: lectureContents.id });
+
+    return c.json({ id: lc?.id, type: "SqlProblemContent" }, 201);
+  }
+
+  return c.json({ errors: ["Unsupported content type"] }, 400);
+});
+
+const createLectureSchema = z.object({
+  lecture: z.object({
+    title: z.string().min(1),
+    serial_number: z.number().int().min(0).optional(),
+  }),
+});
+
+courseRoutes.post("/:id/lectures", authMiddleware, authorize("teacher", "admin"), async (c) => {
+  const parsedId = courseIdSchema.safeParse(c.req.param("id"));
+  if (!parsedId.success) {
+    return c.json({ errors: ["Invalid course id"] }, 400);
+  }
+
+  const body = await c.req.json().catch(() => null);
+  const parsed = createLectureSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ errors: ["Invalid payload"] }, 400);
+  }
+
+  const auth = c.get("auth");
+  const [course] = await db
+    .select({ id: courses.id, ownerId: courses.ownerId })
+    .from(courses)
+    .where(eq(courses.id, parsedId.data))
+    .limit(1);
+
+  if (!course || course.ownerId !== auth.userId) {
+    return c.json({ errors: ["Course not found or access denied"] }, 404);
+  }
+
+  const [maxRow] = await db
+    .select({ maxSerial: max(lectures.serialNumber) })
+    .from(lectures)
+    .where(eq(lectures.courseId, parsedId.data));
+
+  const nextSerial = (maxRow?.maxSerial != null ? Math.max(0, Number(maxRow.maxSerial)) : 0) + 1;
+  const serialNumber = parsed.data.lecture.serial_number ?? nextSerial;
+
+  const now = new Date();
+  const [lecture] = await db
+    .insert(lectures)
+    .values({
+      title: parsed.data.lecture.title,
+      courseId: parsedId.data,
+      serialNumber,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning({ id: lectures.id, title: lectures.title, serialNumber: lectures.serialNumber });
+
+  return c.json(lecture ?? {}, 201);
 });
 
 courseRoutes.get("/:id", authMiddleware, async (c) => {

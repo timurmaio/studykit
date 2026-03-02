@@ -232,6 +232,8 @@ export function Course() {
 
   if (!course) return null;
 
+  const isOwner = authUser && course.owner && Number((course.owner as { id?: number }).id) === authUser.id;
+
   // ── Computed ───────────────────────────────────────────────────────────────
   const avatarSrc = course.avatar || defaultCourseAvatar;
 
@@ -395,6 +397,15 @@ export function Course() {
             )}
 
             {ctaSection}
+            {isOwner && (
+              <Link
+                to={`/courses/${id}/teach`}
+                className="button button--ghost course-hero__actions mt-3"
+                style={{ display: "inline-block" }}
+              >
+                Добавить контент
+              </Link>
+            )}
             {alert && <div className="alert alert-warning course-hero__alert">{alert}</div>}
           </div>
         </motion.div>
@@ -409,11 +420,21 @@ export function Course() {
             <p className="course-empty-desc">
               Автор работает над материалами курса. Загляните позже.
             </p>
+            {isOwner && (
+              <Link to={`/courses/${id}/teach`} className="button mt-4">
+                Добавить первый урок
+              </Link>
+            )}
           </div>
         ) : (
           <div className="course-roadmap">
-            <header className="ml-8 mt-6 text-2xl font-bold mb-5 course-title">
-              Программа курса
+            <header className="ml-8 mt-6 text-2xl font-bold mb-5 course-title flex flex-wrap items-center justify-between gap-4">
+              <span>Программа курса</span>
+              {isOwner && (
+                <Link to={`/courses/${id}/teach`} className="button button--ghost text-base">
+                  Добавить контент
+                </Link>
+              )}
             </header>
 
             {course.lectures.map((lecture) => {

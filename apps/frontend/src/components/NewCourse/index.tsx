@@ -1,113 +1,207 @@
-import { SyntheticEvent, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { TextField, Label, Input, TextArea, Button } from "react-aria-components";
-import { apiPost } from "../../config";
+import { apiGet, apiPost } from "../../config";
+import type { CourseItem } from "../../types/Course";
 
-function NewCourse() {
+const inputClass =
+  "block w-full py-2 px-3 text-base leading-snug text-[var(--color-text)] bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[6px] outline-none transition-colors duration-150 focus:border-[var(--color-accent)] focus-visible:outline-none focus-visible:[box-shadow:var(--focus-ring)] placeholder:text-[var(--color-text-muted)] disabled:bg-[var(--color-bg)] disabled:cursor-not-allowed";
+
+export function NewCourse() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [course, setCourse] = useState<CourseItem | null>(null);
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [state, setState] = useState({
-    type: "MarkdownContent",
-    serial: "",
+    lecture_id: "",
+    type: "MarkdownContent" as "MarkdownContent" | "SqlProblemContent",
+    serial: "0",
     title: "",
     body: "",
+    initial_code: "SELECT 1;",
+    solution_code: "SELECT 1;",
   });
 
-  const handleSubmit = async (event: SyntheticEvent) => {
-    event.preventDefault();
-    const courseId = id;
-    if (!courseId) return;
+  useEffect(() => {
+    if (!id) return;
+    apiGet<CourseItem>(`/api/courses/${id}`)
+      .then(setCourse)
+      .catch(() => setError("Не удалось загрузить курс"));
+  }, [id]);
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const courseId = id;
+    const lectureId = Number(state.lecture_id);
+    if (!courseId || !lectureId) {
+      setError("Выберите раздел лекции");
+      return;
+    }
+    if (!state.title.trim()) {
+      setError("Укажите название");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError("");
     try {
-      await apiPost(`/api/courses/${courseId}/content`, {
+      const payload: Record<string, unknown> = {
         course_content: {
-          title: state.title,
+          lecture_id: lectureId,
+          title: state.title.trim(),
           body: state.body,
-          serial_number: state.serial,
+          serial_number: state.serial ? parseInt(state.serial, 10) : 0,
           type: state.type,
         },
-      });
+      };
+      if (state.type === "SqlProblemContent") {
+        (payload.course_content as Record<string, unknown>).initial_code = state.initial_code || "SELECT 1;";
+        (payload.course_content as Record<string, unknown>).solution_code = state.solution_code || "SELECT 1;";
+      }
+      await apiPost(`/api/courses/${courseId}/content`, payload);
       navigate(`/courses/${courseId}`);
-    } catch {
-      // TODO: show error to user
+    } catch (err: unknown) {
+      setError(String((err as { errors?: string })?.errors ?? "Ошибка при создании"));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleInputChange = (event: SyntheticEvent) => {
-    const target = event.target as
-      | HTMLInputElement
-      | HTMLTextAreaElement
-      | HTMLSelectElement;
-    const name = target.name;
-    const value = target.value;
-    setState({ ...state, [name]: value });
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setState((s) => ({ ...s, [name]: value }));
   };
 
-  return (
-    <form className="new-content-form" onSubmit={handleSubmit}>
-      <TextField name="title" className="form-group mb-4">
-        <Label className="auth-form_label block mb-1">Название</Label>
-        <Input
-          type="text"
-          name="title"
-          value={state.title}
-          className="block w-full py-2 px-3 text-base leading-snug text-[var(--color-text)] bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[6px] outline-none transition-colors duration-150 focus:border-[var(--color-accent)] focus-visible:outline-none focus-visible:[box-shadow:var(--focus-ring)] placeholder:text-[var(--color-text-muted)] disabled:bg-[var(--color-bg)] disabled:cursor-not-allowed"
-          id="new-content-title"
-          placeholder="Название лекции"
-          onChange={handleInputChange as (e: React.ChangeEvent<HTMLInputElement>) => void}
-        />
-      </TextField>
+  if (!course && !error) {
+    return <div className="mx-auto max-w-6xl px-4 py-8">Загрузка...</div>;
+  }
 
-      <TextField name="serial" className="form-group mb-4">
-        <Label className="auth-form_label block mb-1" htmlFor="new-content-serial">
-          Порядковый номер
-        </Label>
-        <Input
-          type="text"
-          name="serial"
-          value={state.serial}
-          className="block w-full py-2 px-3 text-base leading-snug text-[var(--color-text)] bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[6px] outline-none transition-colors duration-150 focus:border-[var(--color-accent)] focus-visible:outline-none focus-visible:[box-shadow:var(--focus-ring)] placeholder:text-[var(--color-text-muted)] disabled:bg-[var(--color-bg)] disabled:cursor-not-allowed"
-          id="new-content-serial"
-          placeholder="Например: 3"
-          onChange={handleInputChange as (e: React.ChangeEvent<HTMLInputElement>) => void}
-        />
-      </TextField>
-
-      <div className="form-group mb-5">
-        <label htmlFor="new-content-type" className="auth-form_label block mb-1">
-          Тип контента
-        </label>
-        <select
-          className="block w-full py-2 px-3 text-base leading-snug text-[var(--color-text)] bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[6px] outline-none transition-colors duration-150 focus:border-[var(--color-accent)] focus-visible:outline-none focus-visible:[box-shadow:var(--focus-ring)] placeholder:text-[var(--color-text-muted)] disabled:bg-[var(--color-bg)] disabled:cursor-not-allowed"
-          name="type"
-          id="new-content-type"
-          value={state.type}
-          onChange={handleInputChange}
-        >
-          <option value="MarkdownContent">Лекция</option>
-          <option value="SqlProblemContent">Практика SQL</option>
-        </select>
+  if (error && !course) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        <div className="alert alert-warning">{error}</div>
+        <Link to="/teaching" className="link mt-4 inline-block">Назад к преподаванию</Link>
       </div>
+    );
+  }
 
-      <TextField name="body" className="form-group mb-5">
-        <Label className="auth-form_label block mb-1" htmlFor="new-content-body">
-          Содержимое
-        </Label>
-        <TextArea
-          name="body"
-          id="new-content-body"
-          value={state.body}
-          rows={6}
-          className="block w-full py-2 px-3 text-base leading-snug text-[var(--color-text)] bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[6px] outline-none transition-colors duration-150 focus:border-[var(--color-accent)] focus-visible:outline-none focus-visible:[box-shadow:var(--focus-ring)] placeholder:text-[var(--color-text-muted)] disabled:bg-[var(--color-bg)] disabled:cursor-not-allowed"
-          onChange={handleInputChange as (e: React.ChangeEvent<HTMLTextAreaElement>) => void}
-        />
-      </TextField>
+  const lectures = course?.lectures ?? [];
 
-      <Button type="submit" className="button auth-form_submit">
-        Создать
-      </Button>
-    </form>
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8">
+      <Link to={`/courses/${id}`} className="link mb-6 inline-block">← Назад к курсу</Link>
+      <h2 className="text-2xl font-bold mb-6">Добавить контент</h2>
+
+      <form className="new-content-form panel p-6" onSubmit={handleSubmit}>
+        <div className="form-group mb-4">
+          <label htmlFor="lecture_id" className="auth-form_label block mb-1">Раздел</label>
+          <select
+            id="lecture_id"
+            name="lecture_id"
+            value={state.lecture_id}
+            onChange={handleChange}
+            className={inputClass}
+            required
+          >
+            <option value="">Выберите раздел</option>
+            {lectures.map((l) => (
+              <option key={l.id} value={l.id}>{l.title}</option>
+            ))}
+          </select>
+        </div>
+
+        <TextField name="title" className="form-group mb-4">
+          <Label className="auth-form_label block mb-1">Название</Label>
+          <Input
+            type="text"
+            name="title"
+            value={state.title}
+            className={inputClass}
+            placeholder="Название лекции или задания"
+            onChange={handleChange}
+          />
+        </TextField>
+
+        <div className="form-group mb-4">
+          <Label className="auth-form_label block mb-1" htmlFor="serial">Порядковый номер</Label>
+          <Input
+            type="text"
+            name="serial"
+            id="serial"
+            value={state.serial}
+            className={inputClass}
+            placeholder="0"
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className="form-group mb-5">
+          <label htmlFor="type" className="auth-form_label block mb-1">Тип контента</label>
+          <select
+            id="type"
+            name="type"
+            className={inputClass}
+            value={state.type}
+            onChange={handleChange}
+          >
+            <option value="MarkdownContent">Лекция (Markdown)</option>
+            <option value="SqlProblemContent">Практика SQL</option>
+          </select>
+        </div>
+
+        <div className="form-group mb-5">
+          <Label className="auth-form_label block mb-1" htmlFor="body">
+            {state.type === "MarkdownContent" ? "Содержимое (Markdown)" : "Описание задания"}
+          </Label>
+          <TextArea
+            name="body"
+            id="body"
+            value={state.body}
+            rows={6}
+            className={inputClass}
+            onChange={handleChange}
+          />
+        </div>
+
+        {state.type === "SqlProblemContent" && (
+          <>
+            <div className="form-group mb-5">
+              <Label className="auth-form_label block mb-1" htmlFor="initial_code">Начальный код (setup)</Label>
+              <TextArea
+                name="initial_code"
+                id="initial_code"
+                value={state.initial_code}
+                rows={4}
+                className={`${inputClass} font-mono text-sm`}
+                placeholder="CREATE TABLE ...; INSERT INTO ..."
+                onChange={handleChange}
+              />
+            </div>
+            <div className="form-group mb-5">
+              <Label className="auth-form_label block mb-1" htmlFor="solution_code">Эталонное решение</Label>
+              <TextArea
+                name="solution_code"
+                id="solution_code"
+                value={state.solution_code}
+                rows={4}
+                className={`${inputClass} font-mono text-sm`}
+                placeholder="SELECT ..."
+                onChange={handleChange}
+              />
+            </div>
+          </>
+        )}
+
+        {error && <div className="mb-4 text-[var(--color-danger)] text-sm">{error}</div>}
+
+        <div className="flex gap-3">
+          <Button type="submit" className="button" isDisabled={isSubmitting}>
+            {isSubmitting ? "Создание..." : "Создать"}
+          </Button>
+          <Link to={`/courses/${id}`} className="button button--ghost">Отмена</Link>
+        </div>
+      </form>
+    </div>
   );
 }
-
-export default NewCourse;
