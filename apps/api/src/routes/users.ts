@@ -1,7 +1,9 @@
 import { Hono } from "hono";
+import { setCookie, deleteCookie } from "hono/cookie";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db";
+import { env } from "../env";
 import {
   users,
   courses,
@@ -13,7 +15,7 @@ import {
   sqlProblemContents,
   userLectureProgress,
 } from "@studykit/db/schema";
-import { authMiddleware } from "../middleware/auth";
+import { authMiddleware, AUTH_COOKIE_NAME } from "../middleware/auth";
 import { roleFromDbRole, signAccessToken } from "../lib/jwt";
 
 const loginSchema = z.object({
@@ -70,6 +72,15 @@ userRoutes.post("/login", async (c) => {
   }
 
   const jwtToken = await signAccessToken({ userId: user.id, role: roleFromDbRole(user.role) });
+
+  setCookie(c, AUTH_COOKIE_NAME, jwtToken, {
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "Lax",
+    path: "/",
+    maxAge: env.ACCESS_TOKEN_TTL_SECONDS,
+  });
+
   return c.json({
     id: user.id,
     firstName: user.firstName,
@@ -77,7 +88,6 @@ userRoutes.post("/login", async (c) => {
     email: user.email,
     avatar: user.avatar,
     role: roleFromDbRole(user.role),
-    jwtToken,
   });
 });
 
@@ -116,14 +126,27 @@ userRoutes.post("/", async (c) => {
     });
 
   const jwtToken = await signAccessToken({ userId: created.id, role: roleFromDbRole(created.role) });
+
+  setCookie(c, AUTH_COOKIE_NAME, jwtToken, {
+    httpOnly: true,
+    secure: env.NODE_ENV === "production",
+    sameSite: "Lax",
+    path: "/",
+    maxAge: env.ACCESS_TOKEN_TTL_SECONDS,
+  });
+
   return c.json(
     {
       ...created,
       role: roleFromDbRole(created.role),
-      jwtToken,
     },
     201
   );
+});
+
+userRoutes.post("/logout", (c) => {
+  deleteCookie(c, AUTH_COOKIE_NAME, { path: "/" });
+  return c.json({ ok: true }, 200);
 });
 
 userRoutes.get("/me", authMiddleware, async (c) => {

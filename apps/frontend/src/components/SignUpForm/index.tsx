@@ -1,5 +1,6 @@
 import { SyntheticEvent } from "react";
 import { Link } from "react-router-dom";
+import { TextField, Label, Input, Button } from "react-aria-components";
 
 interface Props {
   handleSubmit: (event: SyntheticEvent) => void;
@@ -13,75 +14,63 @@ export function SignUpForm(props: Props) {
 
   return (
     <form id="signup-form" className="auth-form" onSubmit={handleSubmit}>
-      <h1 className="auth-form_head mb-8">Создать аккаунт</h1>
-      <p className="auth-form_subhead mb-32">
+      <h1 className="auth-form_head mb-2">Создать аккаунт</h1>
+      <p className="auth-form_subhead mb-8">
         Начни проходить курсы и отмечать прогресс
       </p>
 
-      <div className="auth-form_row mb-20">
-        <div>
-          <label className="auth-form_label mb-4" htmlFor="firstName">
-            Имя
-          </label>
-          <input
-            id="firstName"
+      <div className="auth-form_row mb-5">
+        <TextField name="firstName" isRequired>
+          <Label className="auth-form_label mb-1">Имя</Label>
+          <Input
+            type="text"
             name="firstName"
-            className="input"
-            type="text"
-            onChange={handleChange}
+            className="input w-full"
+            onChange={handleChange as (e: React.ChangeEvent<HTMLInputElement>) => void}
             placeholder="Иван"
-            required
           />
-        </div>
-        <div>
-          <label className="auth-form_label mb-4" htmlFor="lastName">
-            Фамилия
-          </label>
-          <input
-            id="lastName"
-            name="lastName"
-            className="input"
+        </TextField>
+        <TextField name="lastName" isRequired>
+          <Label className="auth-form_label mb-1">Фамилия</Label>
+          <Input
             type="text"
-            onChange={handleChange}
+            name="lastName"
+            className="input w-full"
+            onChange={handleChange as (e: React.ChangeEvent<HTMLInputElement>) => void}
             placeholder="Иванов"
-            required
           />
-        </div>
+        </TextField>
       </div>
 
-      <label className="auth-form_label mb-4" htmlFor="email">
-        Email
-      </label>
-      <input
-        id="email"
-        name="email"
-        className="input mb-20"
-        type="email"
-        onChange={handleChange}
-        placeholder="example@mail.com"
-        required
-      />
+      <TextField name="email" isRequired className="mb-5">
+        <Label className="auth-form_label mb-1">Email</Label>
+        <Input
+          type="email"
+          name="email"
+          className="input w-full"
+          onChange={handleChange as (e: React.ChangeEvent<HTMLInputElement>) => void}
+          placeholder="example@mail.com"
+        />
+      </TextField>
 
-      <label className="auth-form_label mb-4" htmlFor="password">
-        Пароль
-      </label>
-      <input
-        id="password"
-        name="password"
-        className="input mb-24"
-        type="password"
-        onChange={handleChange}
-        placeholder="••••••"
-        required
-      />
+      <TextField name="password" isRequired className="mb-6">
+        <Label className="auth-form_label mb-1">Пароль</Label>
+        <Input
+          type="password"
+          name="password"
+          className="input w-full"
+          onChange={handleChange as (e: React.ChangeEvent<HTMLInputElement>) => void}
+          placeholder="••••••"
+        />
+      </TextField>
 
-      <button
-        id="signup-form-submit"
-        className="button auth-form_submit mb-16"
+      <Button
         type="submit"
+        id="signup-form-submit"
+        className="button auth-form_submit mb-4"
       >
         Зарегистрироваться
-      </button>
+      </Button>
 
       <p className="auth-form_footer">
         Уже есть аккаунт?{" "}
@@ -96,7 +85,9 @@ export function SignUpForm(props: Props) {
       </p>
 
       {error ? (
-        <div className="alert alert-warning mt-16 mb-0">{error}</div>
+        <div className="alert alert-warning mt-4 mb-0" role="alert">
+          {error}
+        </div>
       ) : null}
     </form>
   );

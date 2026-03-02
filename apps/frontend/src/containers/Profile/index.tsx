@@ -1,33 +1,32 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { API_URL, createAxios } from "../../config";
+import { useAuth } from "../../contexts/AuthContext";
+import { apiGet, apiPut } from "../../config";
 
 export function Profile() {
   const navigate = useNavigate();
+  const { user: authUser, signOut } = useAuth();
   const [user, setUser] = useState({ firstName: "", lastName: "", email: "" });
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ firstName: "", lastName: "" });
   const [isSaving, setIsSaving] = useState(false);
-  const [courses, setCourses] = useState<any[]>([]);
+  const [courses, setCourses] = useState<unknown[]>([]);
 
   const handleSignOut = () => {
-    localStorage.removeItem("jwt_token");
-    localStorage.removeItem("user_id");
+    signOut();
+    window.dispatchEvent(new CustomEvent("auth:signout"));
     navigate("/signin");
   };
 
   useEffect(() => {
-    const userId = localStorage.getItem("user_id");
+    const userId = authUser?.id;
     if (!userId) {
       return;
     }
 
-    const axios = createAxios();
-
-    // Load user profile
-    axios
-      .get(`${API_URL}/api/users/${userId}`)
-      .then((res) => res.data)
+    apiGet<{ firstName: string; lastName: string; email: string }>(
+      `/api/users/${userId}`
+    )
       .then((data) => {
         setUser({
           firstName: data.firstName || "",
@@ -43,66 +42,56 @@ export function Profile() {
         setUser({ firstName: "", lastName: "", email: "" });
       });
 
-    // Load user's courses with progress
-    axios
-      .get(`${API_URL}/api/users/${userId}/courses`)
-      .then((res) => res.data)
-      .then((data) => {
-        setCourses(data || []);
-      })
-      .catch(() => {
-        setCourses([]);
-      });
+    apiGet<unknown[]>(`/api/users/${userId}/courses`)
+      .then((data) => setCourses(data || []))
+      .catch(() => setCourses([]));
   }, []);
 
-  const handleSaveProfile = () => {
-    const userId = localStorage.getItem("user_id");
+  const handleSaveProfile = async () => {
+    const userId = authUser?.id;
     if (!userId) return;
 
     setIsSaving(true);
-    const axios = createAxios();
-
-    axios
-      .put(`${API_URL}/api/users/${userId}`, {
-        firstName: editForm.firstName,
-        lastName: editForm.lastName,
-      })
-      .then((res) => res.data)
-      .then((data) => {
-        setUser({
-          firstName: data.firstName || "",
-          lastName: data.lastName || "",
-          email: data.email || "",
-        });
-        setIsEditing(false);
-      })
-      .catch(() => {
-        alert("Не удалось обновить профиль");
-      })
-      .finally(() => {
-        setIsSaving(false);
+    try {
+      const data = await apiPut<{ firstName: string; lastName: string; email: string }>(
+        `/api/users/${userId}`,
+        {
+          firstName: editForm.firstName,
+          lastName: editForm.lastName,
+        }
+      );
+      setUser({
+        firstName: data.firstName || "",
+        lastName: data.lastName || "",
+        email: data.email || "",
       });
+      setIsEditing(false);
+    } catch {
+      alert("Не удалось обновить профиль");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const initials =
     `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.trim() || "SK";
 
   return (
-    <div className="container profile-page">
-      <div className="row">
-        <div className="col-12 col-lg-4 mb-24">
+    <div className="mx-auto max-w-6xl px-4 profile-page">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div className="lg:col-span-4 mb-6">
           <div className="profile-card">
             <div className="profile-card-banner" aria-hidden="true" />
             <div className="profile-card-body">
               <div className="profile-avatar">{initials}</div>
-              <h2 className="profile-name mb-4">
+              <h2 className="profile-name mb-1">
                 {user.firstName || "Студент"} {user.lastName}
               </h2>
-              <p className="profile-email mb-20">
+              <p className="profile-email mb-5">
                 {user.email || "email@example.com"}
               </p>
-              <button 
-                className="button profile-action mb-12" 
+              <button
+                className="button profile-action mb-3"
                 type="button"
                 onClick={() => setIsEditing(!isEditing)}
               >
@@ -118,19 +107,21 @@ export function Profile() {
             </div>
           </div>
         </div>
-        <div className="col-12 col-lg-8">
+        <div className="lg:col-span-8">
           <div className="profile-info">
-            <h2 className="profile-info-title mb-20">Личные данные</h2>
-            
+            <h2 className="profile-info-title mb-5">Личные данные</h2>
+
             {isEditing ? (
-              <div className="profile-edit-form mb-20">
+              <div className="profile-edit-form mb-5">
                 <div className="profile-field">
                   <span className="profile-label">Имя</span>
                   <input
                     type="text"
                     className="input"
                     value={editForm.firstName}
-                    onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, firstName: e.target.value })
+                    }
                     placeholder="Введите имя"
                   />
                 </div>
@@ -140,12 +131,14 @@ export function Profile() {
                     type="text"
                     className="input"
                     value={editForm.lastName}
-                    onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, lastName: e.target.value })
+                    }
                     placeholder="Введите фамилию"
                   />
                 </div>
                 <button
-                  className="button mt-16"
+                  className="button mt-4"
                   type="button"
                   onClick={handleSaveProfile}
                   disabled={isSaving}
@@ -172,11 +165,11 @@ export function Profile() {
           </div>
 
           {courses.length > 0 && (
-            <div className="profile-info mt-24">
-              <h2 className="profile-info-title mb-20">Мои курсы</h2>
+            <div className="profile-info mt-6">
+              <h2 className="profile-info-title mb-5">Мои курсы</h2>
               <div className="courses-list">
-                {courses.map((course) => (
-                  <div key={course.id} className="course-item mb-16">
+                {(courses as { id: number; title: string; progress: { percentage: number; completedContent: number; totalContent: number; solvedProblems: number } }[]).map((course) => (
+                  <div key={course.id} className="course-item mb-4">
                     <div className="course-item-header">
                       <span className="course-item-title">{course.title}</span>
                       <span className="course-item-progress">
@@ -184,15 +177,16 @@ export function Profile() {
                       </span>
                     </div>
                     <div className="course-progress-bar">
-                      <div 
-                        className="course-progress-bar__fill" 
+                      <div
+                        className="course-progress-bar__fill"
                         style={{ width: `${course.progress.percentage}%` }}
                       />
                     </div>
                     <div className="course-item-stats">
-                      {course.progress.completedContent} / {course.progress.totalContent} уроков
+                      {course.progress.completedContent} /{" "}
+                      {course.progress.totalContent} уроков
                       {course.progress.solvedProblems > 0 && (
-                        <span className="ml-16">
+                        <span className="ml-4">
                           ✓ {course.progress.solvedProblems} задач решено
                         </span>
                       )}

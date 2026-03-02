@@ -1,8 +1,16 @@
 import { SyntheticEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { apiPost } from "../../config";
 import { SignUpForm } from "../../components/SignUpForm";
-import { API_URL } from "../../config";
+
+interface UserResponse {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  avatar?: string;
+  role: number;
+}
 
 export function SignUp() {
   const navigate = useNavigate();
@@ -26,10 +34,8 @@ export function SignUp() {
     });
   };
 
-  const handleSubmit = (event: SyntheticEvent) => {
+  const handleSubmit = async (event: SyntheticEvent) => {
     event.preventDefault();
-
-    const url = `${API_URL}/api/users`;
 
     const signUpData = {
       user: {
@@ -40,19 +46,17 @@ export function SignUp() {
       },
     };
 
-    axios
-      .post(url, signUpData)
-      .then((response: any) => {
-        if (response.status === 201) {
-          console.log("Зарегинились!");
-          localStorage.setItem("jwt_token", response.data.jwtToken);
-          localStorage.setItem("user_id", response.data.id);
-          navigate("/courses");
-        }
-      })
-      .catch((error: any) => {
-        setState({ ...state, error: error.response.data.errors });
+    try {
+      await apiPost<UserResponse>("/api/users", signUpData);
+      window.dispatchEvent(new CustomEvent("auth:signin"));
+      navigate("/courses");
+    } catch (err: unknown) {
+      const errors = (err as { errors?: string | string[] })?.errors;
+      setState({
+        ...state,
+        error: Array.isArray(errors) ? errors.join(", ") : String(errors ?? "Ошибка регистрации"),
       });
+    }
   };
 
   return (

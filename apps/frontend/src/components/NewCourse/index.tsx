@@ -1,6 +1,7 @@
 import { SyntheticEvent, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { API_URL, createAxios } from "../../config";
+import { TextField, Label, Input, TextArea, Button } from "react-aria-components";
+import { apiPost } from "../../config";
 
 function NewCourse() {
   const { id } = useParams();
@@ -12,29 +13,24 @@ function NewCourse() {
     body: "",
   });
 
-  const handleSubmit = (event: SyntheticEvent) => {
+  const handleSubmit = async (event: SyntheticEvent) => {
     event.preventDefault();
-
-    const axios = createAxios();
     const courseId = id;
+    if (!courseId) return;
 
-    const url = API_URL + "/api/courses/" + courseId + "/content";
-
-    const data = {
-      course_content: {
-        title: state.title,
-        body: state.body,
-        serial_number: state.serial,
-        type: state.type,
-      },
-    };
-
-    axios.post(url, data).then((response: any) => {
-      if (response.status === 201) {
-        console.log("Контент успешно создан");
-        navigate(`/courses/${courseId}`);
-      }
-    });
+    try {
+      await apiPost(`/api/courses/${courseId}/content`, {
+        course_content: {
+          title: state.title,
+          body: state.body,
+          serial_number: state.serial,
+          type: state.type,
+        },
+      });
+      navigate(`/courses/${courseId}`);
+    } catch {
+      // TODO: show error to user
+    }
   };
 
   const handleInputChange = (event: SyntheticEvent) => {
@@ -49,40 +45,40 @@ function NewCourse() {
 
   return (
     <form className="new-content-form" onSubmit={handleSubmit}>
-      <div className="form-group mb-16">
-        <label htmlFor="new-content-title" className="auth-form_label">
-          Название
-        </label>
-        <input
+      <TextField name="title" className="form-group mb-4">
+        <Label className="auth-form_label block mb-1">Название</Label>
+        <Input
           type="text"
           name="title"
-          className="form-control"
+          value={state.title}
+          className="form-control w-full"
           id="new-content-title"
           placeholder="Название лекции"
-          onChange={handleInputChange}
+          onChange={handleInputChange as (e: React.ChangeEvent<HTMLInputElement>) => void}
         />
-      </div>
+      </TextField>
 
-      <div className="form-group mb-16">
-        <label htmlFor="new-content-serial" className="auth-form_label">
+      <TextField name="serial" className="form-group mb-4">
+        <Label className="auth-form_label block mb-1" htmlFor="new-content-serial">
           Порядковый номер
-        </label>
-        <input
+        </Label>
+        <Input
           type="text"
           name="serial"
-          className="form-control"
+          value={state.serial}
+          className="form-control w-full"
           id="new-content-serial"
           placeholder="Например: 3"
-          onChange={handleInputChange}
+          onChange={handleInputChange as (e: React.ChangeEvent<HTMLInputElement>) => void}
         />
-      </div>
+      </TextField>
 
-      <div className="form-group mb-16">
-        <label htmlFor="new-content-type" className="auth-form_label">
+      <div className="form-group mb-5">
+        <label htmlFor="new-content-type" className="auth-form_label block mb-1">
           Тип контента
         </label>
         <select
-          className="form-control"
+          className="form-control w-full"
           name="type"
           id="new-content-type"
           value={state.type}
@@ -93,22 +89,23 @@ function NewCourse() {
         </select>
       </div>
 
-      <div className="form-group mb-20">
-        <label htmlFor="new-content-body" className="auth-form_label">
+      <TextField name="body" className="form-group mb-5">
+        <Label className="auth-form_label block mb-1" htmlFor="new-content-body">
           Содержимое
-        </label>
-        <textarea
-          className="form-control"
+        </Label>
+        <TextArea
           name="body"
           id="new-content-body"
+          value={state.body}
           rows={6}
-          onChange={handleInputChange}
+          className="form-control w-full"
+          onChange={handleInputChange as (e: React.ChangeEvent<HTMLTextAreaElement>) => void}
         />
-      </div>
+      </TextField>
 
-      <button type="submit" className="button auth-form_submit">
+      <Button type="submit" className="button auth-form_submit">
         Создать
-      </button>
+      </Button>
     </form>
   );
 }

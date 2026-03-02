@@ -10,9 +10,11 @@ interface Props {
     firstName: string;
     lastName: string;
   };
+  isSigned: boolean;
+  onSignOut: () => void;
 }
 export function Header(props: Props) {
-  const { user } = props;
+  const { user, isSigned, onSignOut } = props;
   const { firstName, lastName } = user;
   const navigate = useNavigate();
   const [themePreference, setThemePreference] = useState<ThemePreference>(
@@ -31,16 +33,13 @@ export function Header(props: Props) {
   }, []);
 
   const handleSignOut = () => {
-    localStorage.removeItem("jwt_token");
-    localStorage.removeItem("user_id");
+    onSignOut();
     navigate("/signin");
   };
 
   const handleSignIn = () => {
     navigate("/signin");
   };
-
-  const signed = localStorage.getItem("jwt_token");
 
   const applyTheme = (preference: ThemePreference) => {
     const systemPrefersDark = window.matchMedia(
@@ -62,7 +61,7 @@ export function Header(props: Props) {
     applyTheme(preference);
   };
 
-  const signButton = signed ? (
+  const signButton = isSigned ? (
     <button
       type="button"
       onClick={handleSignOut}
@@ -80,7 +79,7 @@ export function Header(props: Props) {
     </button>
   );
 
-  const linkToProfile = signed ? (
+  const linkToProfile = isSigned ? (
     <Link
       to="/profile"
       className="link link--profile header-profile-link flex align-items-center"
@@ -90,26 +89,26 @@ export function Header(props: Props) {
     </Link>
   ) : null;
 
-  const linkToLearning = signed ? (
+  const linkToLearning = isSigned ? (
     <NavLink
       to="/learning"
       className={({ isActive }: { isActive: boolean }) =>
-        isActive ? "nav-link nav-link--active" : "nav-link mr-4"
+        isActive ? "nav-link nav-link--active" : "nav-link mr-1"
       }
     >
       Обучение
     </NavLink>
   ) : null;
 
-  const userName = signed ? (
+  const userName = isSigned ? (
     <span className="header-user-name">
       {firstName} {lastName}
     </span>
   ) : null;
 
   return (
-    <header className="top-panel mb-20">
-      <div className="container">
+    <header className="top-panel mb-5">
+      <div className="mx-auto max-w-6xl px-4">
         <div className="top-panel_content">
           <nav className="top-panel_nav">
             {linkToLearning}

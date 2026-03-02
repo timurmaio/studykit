@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
-import { API_URL, createAxios } from "../../config";
+import { useAuth } from "../../contexts/AuthContext";
+import { apiGet, apiPost } from "../../config";
 import { SQL_HINTS } from "../../constants/sqlHints";
 import arrow from "./arrow-back.svg";
 import lection from "./lection.svg";
@@ -17,6 +18,7 @@ const ArrowRightIcon = () => (
 
 export function ShowContent() {
   const { id, lectureId, contentId } = useParams();
+  const { user: authUser } = useAuth();
   const [course, setCourse] = useState<CourseItem | null>(null);
   const [content, setContent] = useState<LectureContent | null>(null);
   const [isParticipating, setIsParticipating] = useState(false);
@@ -37,8 +39,7 @@ export function ShowContent() {
       return;
     }
 
-    const axios = createAxios();
-    const userId = localStorage.getItem("user_id");
+    const userId = authUser?.id;
     const courseId = Number(id);
     const currentContentId = Number(contentId);
     setIsLoading(true);
@@ -55,7 +56,7 @@ export function ShowContent() {
 
     // Track progress via API (don't block the UI)
     if (userId) {
-      axios.post(`${API_URL}/api/courses/${courseId}/progress`, {
+      apiPost(`/api/courses/${courseId}/progress`, {
         lectureContentId: currentContentId,
       }).catch(() => {});
     }
@@ -71,49 +72,46 @@ export function ShowContent() {
       } catch {}
     };
 
-    axios
-      .get(`${API_URL}/api/lectures/${lectureId}/content/${contentId}`)
-      .then((response: any) => {
-        setContent(response.data);
+    (async () => {
+      try {
+        const contentData = await apiGet<LectureContent>(
+          `/api/lectures/${lectureId}/content/${contentId}`
+        );
+        setContent(contentData);
         setContentError("");
-        if (response.data?.title) {
-          updateLastVisited(response.data.title);
+        if (contentData?.title) {
+          updateLastVisited(contentData.title);
         }
-      })
-      .catch((error: any) => {
-        const errorText = error?.response?.data?.errors;
+      } catch (err: unknown) {
+        const errorText = (err as { errors?: string | string[] })?.errors;
         setContentError(
           Array.isArray(errorText)
             ? errorText.join(", ")
-            : errorText || "Не удалось загрузить содержимое лекции"
+            : String(errorText ?? "Не удалось загрузить содержимое лекции")
         );
-      })
-      .finally(() => {
+      } finally {
         setIsLoading(false);
-      });
+      }
+    })();
 
-    axios.get(`${API_URL}/api/courses/${id}`).then((response: any) => {
-      setCourse(response.data);
-    });
+    apiGet<CourseItem>(`/api/courses/${id}`).then((data) => setCourse(data));
 
-    axios
-      .get(`${API_URL}/api/courses/${id}/participating`)
-      .then((response: any) => {
-        setIsParticipating(response.data.participating);
-      })
-      .catch(() => {
-        setIsParticipating(false);
-      });
+    apiGet<{ participating: boolean }>(`/api/courses/${id}/participating`)
+      .then((data) => setIsParticipating(data.participating))
+      .catch(() => setIsParticipating(false));
 
     if (userId) {
-      axios
-        .get(`${API_URL}/api/courses/${id}/progress`)
-        .then((progressResponse: any) => {
-          const { completedCount, totalContent } = progressResponse.data;
+      apiGet<{
+        completedCount: number;
+        totalContent: number;
+        viewedContentIds?: number[];
+      }>(`/api/courses/${id}/progress`)
+        .then((progressResponse) => {
+          const { completedCount, totalContent } = progressResponse;
           const ratio = totalContent > 0 ? completedCount / totalContent : 0;
           const courseStatistics = Math.max(0, Math.min(100, Math.round(ratio * 100)));
           setStatistics(courseStatistics);
-          setVisitedContentIds(progressResponse.data.viewedContentIds || []);
+          setVisitedContentIds(progressResponse.viewedContentIds || []);
         })
         .catch(() => {
           setStatistics(0);
@@ -125,15 +123,14 @@ export function ShowContent() {
         pollingRef.current = null;
       }
     };
-  }, [id, lectureId, contentId]);
+  }, [id, lectureId, contentId, authUser?.id]);
 
-  const checkTheSolution = (event: any) => {
+  const checkTheSolution = (event: React.FormEvent) => {
     event.preventDefault();
     if (!content || content.type !== "SqlProblemContent") {
       return;
     }
 
-    const axios = createAxios();
     setAlert("");
     setCheckingInformation("");
     setSucceed(null);
@@ -142,44 +139,39 @@ export function ShowContent() {
       pollingRef.current = null;
     }
 
-    axios
-      .post(`${API_URL}/api/sql_solutions`, {
-        sql_solution: {
-          sql_problem_id: content.sqlProblemId || content.id,
-          code: solution,
-        },
-      })
-      .then((response: any) => {
-        if (response.status !== 201) {
-          return;
-        }
-
-        const solutionId = response.data.id;
+    apiPost<{ id: number }>("/api/sql_solutions", {
+      sql_solution: {
+        sql_problem_id: content.sqlProblemId || content.id,
+        code: solution,
+      },
+    })
+      .then((response) => {
+        const solutionId = response.id;
         setCheckingInformation("Идёт проверка...");
 
         const waitingForSolution = window.setInterval(() => {
-          axios
-            .get(`${API_URL}/api/sql_solutions/${solutionId}`)
-            .then((pollRes: any) => {
-              if (pollRes.data.succeed === true) {
+          apiGet<{ succeed: boolean }>(`/api/sql_solutions/${solutionId}`)
+            .then((pollRes) => {
+              if (pollRes.succeed === true) {
                 setCheckingInformation("Решение верно!");
                 setSucceed(true);
                 clearInterval(waitingForSolution);
                 pollingRef.current = null;
-              } else if (pollRes.data.succeed === false) {
+              } else if (pollRes.succeed === false) {
                 setCheckingInformation("Решение неверно, попробуйте ещё раз!");
                 setSucceed(false);
                 clearInterval(waitingForSolution);
                 pollingRef.current = null;
               }
-            });
+            })
+            .catch(() => {});
         }, 1000);
         pollingRef.current = waitingForSolution;
       })
-      .catch((error: any) => {
-        const errorText = error?.response?.data?.errors;
+      .catch((err: unknown) => {
+        const errorText = (err as { errors?: string | string[] })?.errors;
         setAlert(
-          Array.isArray(errorText) ? errorText[0] : errorText || "Ошибка"
+          Array.isArray(errorText) ? errorText[0] : String(errorText ?? "Ошибка")
         );
       });
   };
@@ -204,7 +196,7 @@ export function ShowContent() {
   };
 
   const passStatistics = isParticipating ? (
-    <div className="course-progress-section mb-16">
+    <div className="course-progress-section mb-4">
       <div className="course-progress-bar">
         <div
           className="course-progress-bar__fill"
@@ -253,21 +245,21 @@ export function ShowContent() {
   }
 
   return (
-    <div className="container show-page">
+    <div className="mx-auto max-w-6xl px-4 show-page">
       <div className="course-decor course-decor--mint" aria-hidden="true" />
       <div className="course-decor course-decor--peach" aria-hidden="true" />
-      <div className="row">
-        <div className="col-12 col-lg-4 mb-24">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        <div className="lg:col-span-4 mb-6">
           <div className="panel show-sidebar">
-            <div className="mx-16 mt-24">
+            <div className="mx-4 mt-6">
               <Link
                 to={`/courses/${id}`}
-                className="link flex mb-16 show-back-link"
+                className="link flex mb-4 show-back-link"
               >
-                <img src={arrow} alt="" className="mr-12" />
+                <img src={arrow} alt="" className="mr-3" />
                 Вернуться к курсу
               </Link>
-              <header className="fs-24 mb-20 course-title show-course-title">
+              <header className="text-2xl font-bold mb-5 course-title show-course-title">
                 {course.title}
               </header>
 
@@ -280,11 +272,11 @@ export function ShowContent() {
                 const isCurrentLecture = Number(lectureId) === lecture.id;
                 return (
                   <div
-                    className={`mb-16 show-lecture-card ${isCurrentLecture ? "show-lecture-card--active" : ""}`}
+                    className={`mb-4 show-lecture-card ${isCurrentLecture ? "show-lecture-card--active" : ""}`}
                     key={lecture.id}
                   >
                     <div className="show-lecture-header">
-                      <p className="fs-20 mb-0 show-lecture-title">
+                      <p className="text-xl mb-0 show-lecture-title">
                         {lecture.title}
                       </p>
                       {isParticipating && (
@@ -312,19 +304,19 @@ export function ShowContent() {
                               <span
                                 className={`circle ${
                                   isVisited ? "circle--green" : ""
-                                } ml-8 mr-16`}
+                                } ml-2 mr-4`}
                               />
                             )}
                             <img
                               src={contentIcon}
-                              className="mr-16"
+                              className="mr-4"
                               alt="Иконка контента"
                             />
                             <span className="course-lesson-title">
                               {content.title}
                             </span>
                             {isParticipating && isVisited && (
-                              <span className="ml-16 fs-12 course-lesson-status">
+                              <span className="ml-4 text-xs course-lesson-status">
                                 Пройдено
                               </span>
                             )}
@@ -338,24 +330,24 @@ export function ShowContent() {
             </div>
           </div>
         </div>
-        <div className="col-12 col-lg-8">
+        <div className="lg:col-span-8">
           <div className="panel show-content-panel">
             {isLoading ? (
-              <div className="mx-32 mt-24">Загружаем материал...</div>
+              <div className="mx-8 mt-6">Загружаем материал...</div>
             ) : (
               <>
-                <header className="ml-32 mt-24 fs-24 mb-20 show-content-title">
+                <header className="ml-8 mt-6 text-2xl font-bold mb-5 show-content-title">
                   {content?.title || course.title}
                 </header>
                 {content?.body ? (
-                  <div className="mx-32 show-markdown">
+                  <div className="mx-8 show-markdown">
                     <ReactMarkdown>{content.body}</ReactMarkdown>
                   </div>
                 ) : null}
                 {contentError ? (
-                  <div className="alert alert-warning mx-32">{contentError}</div>
+                  <div className="alert alert-warning mx-8">{contentError}</div>
                 ) : null}
-                <div className="form-group mx-32">
+                <div className="form-group mx-8">
                   {content?.type === "SqlProblemContent" && (
                     <form className="show-sql-form">
                       <label htmlFor="solutionTextarea" className="show-sql-label">
@@ -388,7 +380,7 @@ export function ShowContent() {
                         </div>
                       ) : null}
                       <textarea
-                        className="form-control mb-16 show-sql-textarea"
+                        className="form-control mb-4 show-sql-textarea"
                         name="solution"
                         id="solutionTextarea"
                         rows={6}
@@ -396,7 +388,7 @@ export function ShowContent() {
                         onChange={(event) => setSolution(event.target.value)}
                       />
                       <button
-                        className="button mb-16 show-sql-button"
+                        className="button mb-4 show-sql-button"
                         onClick={checkTheSolution}
                       >
                         Отправить решение

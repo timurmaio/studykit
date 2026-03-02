@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, SyntheticEvent } from "react";
 import { Link, useParams } from "react-router-dom";
-import { API_URL, createAxios } from "../../config";
+import { useAuth } from "../../contexts/AuthContext";
+import { apiGet, apiPost, apiDelete } from "../../config";
 import lection from "./lection.svg";
 import test from "./test.svg";
 import type { CourseItem, LectureContent } from "../../types/Course";
@@ -117,59 +118,79 @@ export function Course() {
   const [isJoining, setIsJoining] = useState(false);
   const [lastVisited, setLastVisited] = useState<LastVisited | null>(null);
 
-  const loadCourse = useCallback(() => {
+  const { user: authUser } = useAuth();
+
+  const loadCourse = useCallback(async () => {
     if (!id) return;
 
-    const axios = createAxios();
-    const userId = localStorage.getItem("user_id");
+    const userId = authUser?.id;
 
     setIsCourseLoading(true);
     setCourseError("");
     setLastVisited(loadLastVisited(id));
 
-    axios
-      .get(`${API_URL}/api/courses/${id}`)
-      .then((response: any) => setCourse(response.data))
-      .catch(() => setCourseError("Не удалось загрузить страницу курса"))
-      .finally(() => setIsCourseLoading(false));
+    try {
+      const courseData = await apiGet<CourseItem>(`/api/courses/${id}`);
+      setCourse(courseData);
+    } catch {
+      setCourseError("Не удалось загрузить страницу курса");
+    } finally {
+      setIsCourseLoading(false);
+    }
 
-    axios
-      .get(`${API_URL}/api/courses/${id}/participating`)
-      .then((response: any) => setIsParticipating(response.data.participating))
-      .catch(() => setIsParticipating(null));
+    try {
+      const participatingData = await apiGet<{ participating: boolean }>(
+        `/api/courses/${id}/participating`
+      );
+      setIsParticipating(participatingData.participating);
+    } catch {
+      setIsParticipating(null);
+    }
 
     if (userId) {
-      axios
-        .get(`${API_URL}/api/courses/${id}/progress`)
-        .then((response: any) => setVisitedContentIds(response.data.viewedContentIds || []))
-        .catch(() => setVisitedContentIds([]));
+      try {
+        const progressData = await apiGet<{ viewedContentIds?: number[] }>(
+          `/api/courses/${id}/progress`
+        );
+        setVisitedContentIds(progressData.viewedContentIds || []);
+      } catch {
+        setVisitedContentIds([]);
+      }
     }
-  }, [id]);
+  }, [id, authUser?.id]);
 
   useEffect(() => {
     loadCourse();
   }, [loadCourse]);
 
-  const joinCourse = () => {
+  const joinCourse = async () => {
     if (!id || isJoining) return;
     setIsJoining(true);
-    const axios = createAxios();
-    axios
-      .post(`${API_URL}/api/courses/${id}/join`)
-      .then(() => { setIsParticipating(true); setAlert(""); })
-      .catch((error: any) => setAlert(error?.response?.data?.errors || "Не удалось подписаться"))
-      .finally(() => setIsJoining(false));
+    try {
+      await apiPost(`/api/courses/${id}/join`);
+      setIsParticipating(true);
+      setAlert("");
+    } catch (err: unknown) {
+      const errors = (err as { errors?: string })?.errors;
+      setAlert(String(errors ?? "Не удалось подписаться"));
+    } finally {
+      setIsJoining(false);
+    }
   };
 
-  const leaveCourse = () => {
+  const leaveCourse = async () => {
     if (!id || isJoining) return;
     setIsJoining(true);
-    const axios = createAxios();
-    axios
-      .delete(`${API_URL}/api/courses/${id}/leave`)
-      .then(() => { setIsParticipating(false); setAlert(""); })
-      .catch((error: any) => setAlert(error?.response?.data?.errors || "Не удалось отписаться"))
-      .finally(() => setIsJoining(false));
+    try {
+      await apiDelete(`/api/courses/${id}/leave`);
+      setIsParticipating(false);
+      setAlert("");
+    } catch (err: unknown) {
+      const errors = (err as { errors?: string })?.errors;
+      setAlert(String(errors ?? "Не удалось отписаться"));
+    } finally {
+      setIsJoining(false);
+    }
   };
 
   const checkAccessToContent = (event: SyntheticEvent) => {
@@ -186,7 +207,7 @@ export function Course() {
   // ── Loading ────────────────────────────────────────────────────────────────
   if (isCourseLoading) {
     return (
-      <div className="container course-page">
+      <div className="mx-auto max-w-6xl px-4 course-page">
         <div className="course-decor course-decor--mint" aria-hidden="true" />
         <div className="course-decor course-decor--peach" aria-hidden="true" />
         <div className="panel">
@@ -204,7 +225,7 @@ export function Course() {
   // ── Error ──────────────────────────────────────────────────────────────────
   if (courseError) {
     return (
-      <div className="container course-page">
+      <div className="mx-auto max-w-6xl px-4 course-page">
         <div className="course-error-state panel">
           <div className="course-error-icon" aria-hidden="true">⚠</div>
           <h2 className="course-error-title">Не удалось загрузить курс</h2>
@@ -309,7 +330,7 @@ export function Course() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="container course-page">
+    <div className="mx-auto max-w-6xl px-4 course-page">
       <div className="course-decor course-decor--mint" aria-hidden="true" />
       <div className="course-decor course-decor--peach" aria-hidden="true" />
 
@@ -393,7 +414,7 @@ export function Course() {
           </div>
         ) : (
           <div className="course-roadmap">
-            <header className="ml-32 mt-24 fs-24 mb-20 course-title">
+            <header className="ml-8 mt-6 text-2xl font-bold mb-5 course-title">
               Программа курса
             </header>
 
@@ -405,8 +426,8 @@ export function Course() {
                 lecture.content.length > 0 && lectureDoneCount === lecture.content.length;
 
               return (
-                <div className="mx-32 mb-20 course-lecture-card" key={lecture.id}>
-                  <p className={`fs-20 mb-8 course-lecture-title ${isLectureComplete ? "course-lecture-title--done" : ""}`}>
+                <div className="mx-8 mb-5 course-lecture-card" key={lecture.id}>
+                  <p className={`text-xl mb-2 course-lecture-title ${isLectureComplete ? "course-lecture-title--done" : ""}`}>
                     <span className="course-lecture-title__text">
                       {isLectureComplete && (
                         <span className="course-lecture-check" aria-label="Раздел завершён">
@@ -452,12 +473,12 @@ export function Course() {
                           <div className="list-item course-lesson-row">
                             {isParticipating && (
                               <span
-                                className={`circle ${isDone ? "circle--green" : ""} ml-8 mr-16`}
+                                className={`circle ${isDone ? "circle--green" : ""} ml-2 mr-4`}
                               />
                             )}
                             <img
                               src={contentIcon}
-                              className="mr-16"
+                              className="mr-4"
                               alt={content.type === "MarkdownContent" ? "Лекция" : "Задание"}
                             />
                             <span className="course-lesson-title">{content.title}</span>
@@ -466,7 +487,7 @@ export function Course() {
                               {readingTime}
                             </span>
                             {isParticipating && isDone && (
-                              <span className="ml-8 fs-12 course-lesson-status">
+                              <span className="ml-2 text-xs course-lesson-status">
                                 <CheckIcon />
                                 Пройдено
                               </span>

@@ -1,5 +1,8 @@
 import { createMiddleware } from "hono/factory";
+import { getCookie } from "hono/cookie";
 import { verifyAccessToken, type Role } from "../lib/jwt";
+
+export const AUTH_COOKIE_NAME = "auth_token";
 
 export interface AuthContext {
   userId: number;
@@ -9,11 +12,14 @@ export interface AuthContext {
 export const authMiddleware = createMiddleware<{ Variables: { auth: AuthContext } }>(
   async (c, next) => {
     const authorization = c.req.header("authorization");
-    const token = authorization
+    const tokenFromHeader = authorization
       ? authorization.startsWith("Bearer ")
         ? authorization.slice("Bearer ".length)
         : authorization
       : null;
+
+    const tokenFromCookie = getCookie(c, AUTH_COOKIE_NAME);
+    const token = tokenFromHeader ?? tokenFromCookie;
 
     if (!token) {
       return c.json({ errors: ["Необходимо войти на сайт"] }, 401);

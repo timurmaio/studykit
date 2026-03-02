@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { CourseCard } from "../../components/CourseCard";
 import type { CourseItem } from "../../types/Course";
-import { API_URL } from "../../config";
+import { apiGet } from "../../config";
 
 export function Courses() {
   const [courses, setCourses] = useState<CourseItem[]>([]);
@@ -9,8 +9,7 @@ export function Courses() {
 
   useEffect(() => {
     setIsLoading(true);
-    fetch(`${API_URL}/api/courses`)
-      .then((res) => res.json())
+    apiGet<CourseItem[]>("/api/courses")
       .then((json) => setCourses(json))
       .catch(() => setCourses([]))
       .finally(() => setIsLoading(false));
@@ -18,7 +17,7 @@ export function Courses() {
 
   function renderCourseCard(courseItem: CourseItem) {
     return (
-      <div key={courseItem.id} className="col-12 col-md-6 col-lg-3 mb-24">
+      <div key={courseItem.id} className="mb-6">
         <CourseCard {...courseItem} />
       </div>
     );
@@ -26,17 +25,17 @@ export function Courses() {
 
   function renderSkeletonCard(_: unknown, index: number) {
     return (
-      <div key={`skeleton-${index}`} className="col-12 col-md-6 col-lg-3 mb-24">
+      <div key={`skeleton-${index}`} className="mb-6">
         <div className="courses-skeleton-card" aria-hidden="true" />
       </div>
     );
   }
 
   return (
-    <div className="container courses-page">
-      <header className="courses-hero mb-32">
-        <p className="courses-kicker mb-16">StudyKit</p>
-        <h1 className="courses-title mb-16">
+    <div className="mx-auto max-w-6xl px-4 courses-page">
+      <header className="courses-hero mb-8">
+        <p className="courses-kicker mb-4">StudyKit</p>
+        <h1 className="courses-title mb-4">
           <span>Каталог</span>
           <em>курсов</em>
         </h1>
@@ -45,11 +44,11 @@ export function Courses() {
         </p>
       </header>
       {isLoading ? (
-        <div className="row">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 8 }).map(renderSkeletonCard)}
         </div>
       ) : courses.length ? (
-        <div className="row courses-grid">{courses.map(renderCourseCard)}</div>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 courses-grid">{courses.map(renderCourseCard)}</div>
       ) : (
         <div className="courses-empty">Курсы скоро появятся</div>
       )}
