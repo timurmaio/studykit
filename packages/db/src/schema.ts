@@ -117,3 +117,10 @@ export const refreshTokens = pgTable("refresh_tokens", {
   lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
   version: bigint("version", { mode: "number" }).default(1).notNull(),
 });
+
+export const userLectureProgress = pgTable("user_lecture_progress", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull(),
+  lectureContentId: integer("lecture_content_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});

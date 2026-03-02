@@ -1,6 +1,6 @@
 FROM ruby:3.2-slim
 
-RUN apt-get update && apt-get install -y --no-install-recommends sqlite3 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends sqlite3 curl && rm -rf /var/lib/apt/lists/*
 RUN gem install webrick --no-document
 
 WORKDIR /app

@@ -34,7 +34,6 @@ export function ShowContent() {
     const userId = localStorage.getItem("user_id");
     const courseId = Number(id);
     const currentContentId = Number(contentId);
-    const visitedStorageKey = `visited_content_ids_${courseId}`;
     setIsLoading(true);
     setSolution("");
     setAlert("");
@@ -47,20 +46,12 @@ export function ShowContent() {
       pollingRef.current = null;
     }
 
-    const savedVisited = localStorage.getItem(visitedStorageKey);
-    let parsedVisited: number[] = [];
-    if (savedVisited) {
-      try {
-        parsedVisited = JSON.parse(savedVisited);
-      } catch {
-        parsedVisited = [];
-      }
+    // Track progress via API (don't block the UI)
+    if (userId) {
+      axios.post(`${API_URL}/api/courses/${courseId}/progress`, {
+        lectureContentId: currentContentId,
+      }).catch(() => {});
     }
-    const nextVisited = parsedVisited.includes(currentContentId)
-      ? parsedVisited
-      : [...parsedVisited, currentContentId];
-    localStorage.setItem(visitedStorageKey, JSON.stringify(nextVisited));
-    setVisitedContentIds(nextVisited);
 
     axios
       .get(`${API_URL}/api/lectures/${lectureId}/content/${contentId}`)
@@ -95,20 +86,13 @@ export function ShowContent() {
 
     if (userId) {
       axios
-        .get(`${API_URL}/api/courses/${id}/participants/${userId}/statistics`)
-        .then((response: any) => {
-          const solvedRaw = Number(
-            response?.data?.data?.solvedProblems ??
-              response?.data?.data?.solved_problems
-          );
-          const totalRaw = Number(response?.data?.data?.problems);
-          const solved = Number.isFinite(solvedRaw) ? solvedRaw : 0;
-          const total = Number.isFinite(totalRaw) ? totalRaw : 0;
-          const ratio = total > 0 ? solved / total : 0;
-          const courseStatistics = Number.isFinite(ratio)
-            ? Math.max(0, Math.min(100, Math.round(ratio * 100)))
-            : 0;
+        .get(`${API_URL}/api/courses/${id}/progress`)
+        .then((progressResponse: any) => {
+          const { completedCount, totalContent } = progressResponse.data;
+          const ratio = totalContent > 0 ? completedCount / totalContent : 0;
+          const courseStatistics = Math.max(0, Math.min(100, Math.round(ratio * 100)));
           setStatistics(courseStatistics);
+          setVisitedContentIds(progressResponse.data.viewedContentIds || []);
         })
         .catch(() => {
           setStatistics(0);

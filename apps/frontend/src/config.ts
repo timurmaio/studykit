@@ -6,7 +6,7 @@ const createAxios = () => {
   const token = localStorage.getItem("jwt_token");
 
   return _axios.create({
-    headers: token ? { Authorization: token } : {},
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
 };
 

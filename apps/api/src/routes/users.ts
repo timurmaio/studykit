@@ -1,8 +1,18 @@
 import { Hono } from "hono";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "../db";
-import { users } from "@studykit/db/schema";
+import {
+  users,
+  courses,
+  groups,
+  userGroups,
+  lectures,
+  lectureContents,
+  sqlSolutions,
+  sqlProblemContents,
+  userLectureProgress,
+} from "@studykit/db/schema";
 import { authMiddleware } from "../middleware/auth";
 import { roleFromDbRole, signAccessToken } from "../lib/jwt";
 
@@ -174,4 +184,155 @@ userRoutes.get("/:id", authMiddleware, async (c) => {
     ...user,
     role: roleFromDbRole(user.role),
   });
+});
+
+userRoutes.put("/:id", authMiddleware, async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isFinite(id) || id <= 0) {
+    return c.json({ errors: ["Invalid user id"] }, 400);
+  }
+
+  const auth = c.get("auth");
+  if (auth.userId !== id) {
+    return c.json({ errors: "You can edit only your own account" }, 403);
+  }
+
+  const body = await c.req.json().catch(() => null);
+  const parsed = z.object({
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+  }).safeParse(body);
+
+  if (!parsed.success) {
+    return c.json({ errors: ["Invalid payload"] }, 400);
+  }
+
+  const { firstName, lastName } = parsed.data;
+
+  await db
+    .update(users)
+    .set({
+      ...(firstName !== undefined && { firstName }),
+      ...(lastName !== undefined && { lastName }),
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, id));
+
+  const [updatedUser] = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      avatar: users.avatar,
+      role: users.role,
+    })
+    .from(users)
+    .where(eq(users.id, id))
+    .limit(1);
+
+  return c.json({
+    ...updatedUser,
+    role: roleFromDbRole(updatedUser.role),
+  });
+});
+
+userRoutes.get("/:id/courses", authMiddleware, async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isFinite(id) || id <= 0) {
+    return c.json({ errors: ["Invalid user id"] }, 400);
+  }
+
+  const auth = c.get("auth");
+  if (auth.userId !== id) {
+    return c.json({ errors: "You can view only your own courses" }, 403);
+  }
+
+  const userCourseIds = await db
+    .select({ courseId: groups.courseId })
+    .from(groups)
+    .leftJoin(userGroups, eq(groups.id, userGroups.groupId))
+    .where(eq(userGroups.userId, auth.userId));
+
+  const courseIdList = userCourseIds.map((r) => r.courseId).filter(Boolean);
+
+  if (courseIdList.length === 0) {
+    return c.json([]);
+  }
+
+  const courseRows = await db
+    .select({
+      id: courses.id,
+      title: courses.title,
+      description: courses.description,
+      avatar: courses.avatar,
+      ownerFirstName: users.firstName,
+      ownerLastName: users.lastName,
+    })
+    .from(courses)
+    .leftJoin(users, eq(courses.ownerId, users.id))
+    .where(inArray(courses.id, courseIdList));
+
+  const result = await Promise.all(
+    courseRows.map(async (course) => {
+      const contentCountResult = await db
+        .select({ count: sql<{ count: number }[]>`COUNT(*)` })
+        .from(lectureContents)
+        .leftJoin(lectures, eq(lectures.id, lectureContents.lectureId))
+        .where(eq(lectures.courseId, course.id));
+
+      const progressCountResult = await db
+        .select({ count: sql<{ count: number }[]>`COUNT(DISTINCT user_lecture_progress.lecture_content_id)` })
+        .from(userLectureProgress)
+        .leftJoin(lectureContents, eq(userLectureProgress.lectureContentId, lectureContents.id))
+        .leftJoin(lectures, eq(lectures.id, lectureContents.lectureId))
+        .where(
+          and(
+            eq(userLectureProgress.userId, auth.userId),
+            eq(lectures.courseId, course.id)
+          )
+        );
+
+      const solvedProblemsResult = await db
+        .select({ count: sql<{ count: number }[]>`COUNT(DISTINCT sql_problem_contents.id)` })
+        .from(sqlSolutions)
+        .leftJoin(sqlProblemContents, eq(sqlSolutions.sqlProblemId, sqlProblemContents.id))
+        .leftJoin(lectureContents, and(
+          eq(lectureContents.actableType, "SqlProblemContent"),
+          eq(lectureContents.actableId, sqlProblemContents.id)
+        ))
+        .leftJoin(lectures, eq(lectures.id, lectureContents.lectureId))
+        .where(
+          and(
+            eq(sqlSolutions.userId, auth.userId),
+            eq(sqlSolutions.succeed, true),
+            eq(lectures.courseId, course.id)
+          )
+        );
+
+      const totalContent = contentCountResult[0]?.count || 0;
+      const completedContent = progressCountResult[0]?.count || 0;
+      const solved = solvedProblemsResult[0]?.count || 0;
+
+      // Combine viewed content and solved SQL problems for completion
+      const allCompleted = Math.max(completedContent, solved);
+      const percentage = totalContent > 0 ? Math.round((allCompleted / totalContent) * 100) : 0;
+
+      return {
+        ...course,
+        owner: {
+          firstName: course.ownerFirstName,
+          lastName: course.ownerLastName,
+        },
+        progress: {
+          totalContent,
+          completedContent: allCompleted,
+          solvedProblems: solved,
+          percentage: Math.min(100, percentage),
+        },
+      };
+    })
+  );
+
+  return c.json(result);
 });

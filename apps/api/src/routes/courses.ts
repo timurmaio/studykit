@@ -13,6 +13,7 @@ import {
   sqlProblemContents,
   markdownContents,
   videoContents,
+  userLectureProgress,
 } from "@studykit/db/schema";
 import { authMiddleware } from "../middleware/auth";
 import { roleFromDbRole } from "../lib/jwt";
@@ -390,5 +391,101 @@ courseRoutes.get("/:id/participants/:userId/statistics", authMiddleware, async (
       solved_problems: solvedProblems,
       problems: problemIds.size,
     },
+  });
+});
+
+courseRoutes.post("/:id/progress", authMiddleware, async (c) => {
+  const parsedId = courseIdSchema.safeParse(c.req.param("id"));
+  if (!parsedId.success) {
+    return c.json({ errors: ["Invalid course id"] }, 400);
+  }
+
+  const body = await c.req.json().catch(() => null);
+  const parsed = z.object({
+    lectureContentId: z.number().int().positive(),
+  }).safeParse(body);
+
+  if (!parsed.success) {
+    return c.json({ errors: ["Invalid payload"] }, 400);
+  }
+
+  const auth = c.get("auth");
+  const { lectureContentId } = parsed.data;
+
+  const [content] = await db
+    .select({ id: lectureContents.id })
+    .from(lectureContents)
+    .where(eq(lectureContents.id, lectureContentId))
+    .limit(1);
+
+  if (!content) {
+    return c.json({ errors: ["Lecture content not found"] }, 404);
+  }
+
+  await db
+    .insert(userLectureProgress)
+    .values({
+      userId: auth.userId,
+      lectureContentId,
+      createdAt: new Date(),
+    })
+    .onConflictDoNothing();
+
+  return c.json({ success: true });
+});
+
+courseRoutes.get("/:id/progress", authMiddleware, async (c) => {
+  const parsedId = courseIdSchema.safeParse(c.req.param("id"));
+  if (!parsedId.success) {
+    return c.json({ errors: ["Invalid course id"] }, 400);
+  }
+
+  const auth = c.get("auth");
+
+  const contentIds = await db
+    .select({ id: lectureContents.id })
+    .from(lectureContents)
+    .leftJoin(lectures, eq(lectures.id, lectureContents.lectureId))
+    .where(eq(lectures.courseId, parsedId.data));
+
+  const contentIdList = contentIds.map((r) => r.id);
+
+  const progressRows = await db
+    .select({ lectureContentId: userLectureProgress.lectureContentId })
+    .from(userLectureProgress)
+    .where(
+      and(
+        eq(userLectureProgress.userId, auth.userId),
+        contentIdList.length > 0 ? inArray(userLectureProgress.lectureContentId, contentIdList) : eq(userLectureProgress.id, 0)
+      )
+    );
+
+  const solvedProblemIds = await db
+    .select({ sqlProblemId: sqlSolutions.sqlProblemId })
+    .from(sqlSolutions)
+    .where(and(eq(sqlSolutions.userId, auth.userId), eq(sqlSolutions.succeed, true)));
+
+  const solvedIds = new Set(solvedProblemIds.map((r) => r.sqlProblemId).filter(Boolean));
+
+  const solvedContentIds = await db
+    .select({ lectureContentId: lectureContents.id })
+    .from(sqlProblemContents)
+    .leftJoin(
+      lectureContents,
+      and(eq(lectureContents.actableType, "SqlProblemContent"), eq(lectureContents.actableId, sqlProblemContents.id))
+    )
+    .where(inArray(sqlProblemContents.id, Array.from(solvedIds)));
+
+  const solvedContentIdSet = new Set(solvedContentIds.map((r) => r.lectureContentId).filter(Boolean));
+
+  const allProgressIds = new Set([
+    ...progressRows.map((r) => r.lectureContentId),
+    ...solvedContentIdSet,
+  ]);
+
+  return c.json({
+    viewedContentIds: Array.from(allProgressIds),
+    totalContent: contentIdList.length,
+    completedCount: allProgressIds.size,
   });
 });

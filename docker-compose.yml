@@ -1,101 +1,19 @@
 services:
-  rabbitmq:
-    image: rabbitmq:3.13-management
-    environment:
-      RABBITMQ_DEFAULT_USER: studykit
-      RABBITMQ_DEFAULT_PASS: studykit
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-
   db:
-    image: postgres:9.6
+    image: postgres:16
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
+      POSTGRES_DB: studykit_development
     volumes:
-      - db_data_legacy:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-
-  backend:
-    build: ./apps/backend
-    environment:
-      RAILS_ENV: development
-      SECRET_KEY_BASE: ${SECRET_KEY_BASE:-dev_secret_key_base_min_30_chars}
-      DATABASE_HOST: db
-      DATABASE_USER: postgres
-      DATABASE_PASSWORD: postgres
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USER: studykit
-      RABBITMQ_PASS: studykit
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change_me_please}
-    volumes:
-      - ./apps/backend:/app
-    depends_on:
-      - rabbitmq
-      - db
-    ports:
-      - "3000:3000"
-    command: >
-      sh -c "rm -f tmp/pids/server.pid &&
-             until bundle exec rails db:create db:migrate db:seed; do
-               echo 'DB is not ready yet, retrying in 2s...';
-               sleep 2;
-             done &&
-             bundle exec rails server -b 0.0.0.0 -p 3000"
-
-  sneakers:
-    build: ./apps/backend
-    environment:
-      RAILS_ENV: development
-      SECRET_KEY_BASE: ${SECRET_KEY_BASE:-dev_secret_key_base_min_30_chars}
-      DATABASE_HOST: db
-      DATABASE_USER: postgres
-      DATABASE_PASSWORD: postgres
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_USER: studykit
-      RABBITMQ_PASS: studykit
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change_me_please}
-      WORKERS: CodeExecutorWorker,SolutionUpdater
-    volumes:
-      - ./apps/backend:/app
-    depends_on:
-      - backend
-      - rabbitmq
-      - db
-    command: >
-      sh -c "bundle exec rake sneakers:run"
-
-  frontend:
-    build:
-      context: .
-      dockerfile: apps/frontend/Dockerfile
-    environment:
-      VITE_API_URL: http://localhost:3100
-    volumes:
-      - ./apps/frontend:/app/apps/frontend
-      - frontend_node_modules:/app/apps/frontend/node_modules
-    depends_on:
-      - backend
-    ports:
-      - "5173:5173"
-
-  admin:
-    build:
-      context: .
-      dockerfile: apps/admin/Dockerfile
-    environment:
-      REACT_APP_API_URL: http://localhost:3000
-    volumes:
-      - ./apps/admin:/app/apps/admin
-      - admin_node_modules:/app/apps/admin/node_modules
-    depends_on:
-      - backend
-    ports:
-      - "3001:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
@@ -103,9 +21,14 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - redis_data_v2:/data
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  api_v2:
+  api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -115,29 +38,65 @@ services:
       API_PORT: 3100
       DATABASE_URL: postgres://postgres:postgres@db:5432/studykit_development
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET:-replace_me_with_min_32_chars_secret}
-      JWT_ISSUER: studykit-api-v2
+      JWT_SECRET: ${JWT_SECRET:-change_me_with_min_32_chars_secret}
+      JWT_ISSUER: studykit-api
       JWT_AUDIENCE: studykit-frontend
       CORS_ORIGINS: http://localhost:5173,http://localhost:3001
       TRUST_PROXY: "false"
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "3100:3100"
+    volumes:
+      - ./apps/api:/app/apps/api
 
-  worker_v2:
+  worker:
     build:
       context: .
       dockerfile: apps/worker/Dockerfile
     environment:
       DATABASE_URL: postgres://postgres:postgres@db:5432/studykit_development
       REDIS_URL: redis://redis:6379
-      EXECUTOR_URL: http://executor_v2:3200
+      EXECUTOR_URL: http://executor:3200
     depends_on:
-      - db
-      - redis
-      - executor_v2
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      executor:
+        condition: service_healthy
+
+  executor:
+    build:
+      context: .
+      dockerfile: apps/executor/Dockerfile
+    environment:
+      EXECUTOR_HOST: 0.0.0.0
+      EXECUTOR_PORT: 3200
+    ports:
+      - "3200:3200"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3200/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+    environment:
+      VITE_API_URL: http://localhost:3100
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./apps/frontend:/app/apps/frontend
+      - frontend_node_modules:/app/apps/frontend/node_modules
+    depends_on:
+      - api
 
   directus:
     image: directus/directus:11.8.0
@@ -156,25 +115,44 @@ services:
       CORS_ENABLED: "true"
       CORS_ORIGIN: "http://localhost:5173,http://localhost:3001"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
       - "8055:8055"
     volumes:
       - directus_uploads:/directus/uploads
 
-  executor_v2:
-    build:
-      context: .
-      dockerfile: apps/executor/Dockerfile
+  db-init:
+    image: postgres:16
+    depends_on:
+      db:
+        condition: service_healthy
     environment:
-      EXECUTOR_HOST: 0.0.0.0
-      EXECUTOR_PORT: 3200
-    ports:
-      - "3200:3200"
+      PGHOST: db
+      PGPORT: "5432"
+      PGDATABASE: studykit_development
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    volumes:
+      - ./apps/api/db:/docker-entrypoint-initdb.d
+      - ./apps/api/db/schema.sql:/schema.sql
+    entrypoint: ["bash", "-c"]
+    command:
+      - |
+        echo "Waiting for database..."
+        until pg_isready -h $$PGHOST -p $$PGPORT -U $$PGUSER; do
+          echo "Database is unavailable - sleeping"
+          sleep 2
+        done
+        echo "Database is ready!"
+        echo "Running schema..."
+        psql -h $$PGHOST -p $$PGPORT -U $$PGUSER -d $$PGDATABASE -f /schema.sql || true
+        echo "Running seed..."
+        psql -h $$PGHOST -p $$PGPORT -U $$PGUSER -d $$PGDATABASE -f /docker-entrypoint-initdb.d/seed.sql || true
+        echo "Database initialization complete"
 
 volumes:
-  db_data_legacy:
+  db_data:
+  redis_data:
   frontend_node_modules:
-  admin_node_modules:
-  redis_data_v2:
   directus_uploads:
