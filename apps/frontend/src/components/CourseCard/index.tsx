@@ -36,7 +36,7 @@ export function CourseCard(props: Props) {
           src={avatarSrc}
           alt="Изображение курса"
         />
-        <div className="absolute bottom-0 left-0 right-0 z-10 p-5 pb-[22px] pt-[22px] lg:px-6 lg:py-7">
+        <div className="absolute bottom-0 left-0 right-0 z-10 px-5 py-[22px] lg:px-6 lg:py-7">
           {type ? (
             <span className="mb-2 inline-block rounded-[var(--radius-xs)] bg-[var(--color-accent)] px-2 py-[3px] text-[10px] font-bold uppercase leading-none tracking-[0.08em] text-white">
               {type}

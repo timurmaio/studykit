@@ -38,7 +38,7 @@ export function Courses() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 courses-page">
+    <div className="mx-auto max-w-6xl px-4 pb-6">
       <motion.header
         className="mb-8 pt-[52px] pb-11"
         initial={{ opacity: 0, y: -10 }}
@@ -61,7 +61,7 @@ export function Courses() {
           {Array.from({ length: 8 }).map(renderSkeletonCard)}
         </div>
       ) : courses.length ? (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 lg:auto-rows-[minmax(340px,auto)] courses-grid">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 lg:auto-rows-[minmax(340px,auto)]">
           {courses.map((c, i) => renderCourseCard(c, i))}
         </div>
       ) : (

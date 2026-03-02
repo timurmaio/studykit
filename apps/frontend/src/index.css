@@ -885,10 +885,6 @@ img {
   line-height: 1;
 }
 
-.courses-page {
-  padding-bottom: 24px;
-}
-
 .courses-skeleton-card {
   height: 340px;
   border-radius: var(--radius-lg);
