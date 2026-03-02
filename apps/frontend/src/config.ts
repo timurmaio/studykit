@@ -1,2 +1,2 @@
-export { API_URL, apiGet, apiPost, apiPut, apiDelete } from "./api/client";
-export type { ApiError } from "./api/client";
+export { API_URL, apiGet, apiPost, apiPut, apiDelete, apiSqlSolutionStream } from "./api/client";
+export type { ApiError, SqlSolutionStreamResult } from "./api/client";

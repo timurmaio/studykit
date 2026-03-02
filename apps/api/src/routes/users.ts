@@ -277,7 +277,9 @@ userRoutes.get("/:id/courses", authMiddleware, async (c) => {
     .leftJoin(userGroups, eq(groups.id, userGroups.groupId))
     .where(eq(userGroups.userId, auth.userId));
 
-  const courseIdList = userCourseIds.map((r) => r.courseId).filter(Boolean);
+  const courseIdList = userCourseIds
+    .map((r) => r.courseId)
+    .filter((id): id is number => id != null);
 
   if (courseIdList.length === 0) {
     return c.json([]);
@@ -299,13 +301,13 @@ userRoutes.get("/:id/courses", authMiddleware, async (c) => {
   const result = await Promise.all(
     courseRows.map(async (course) => {
       const contentCountResult = await db
-        .select({ count: sql<{ count: number }[]>`COUNT(*)` })
+        .select({ count: sql<number>`COUNT(*)` })
         .from(lectureContents)
         .leftJoin(lectures, eq(lectures.id, lectureContents.lectureId))
         .where(eq(lectures.courseId, course.id));
 
       const progressCountResult = await db
-        .select({ count: sql<{ count: number }[]>`COUNT(DISTINCT user_lecture_progress.lecture_content_id)` })
+        .select({ count: sql<number>`COUNT(DISTINCT user_lecture_progress.lecture_content_id)` })
         .from(userLectureProgress)
         .leftJoin(lectureContents, eq(userLectureProgress.lectureContentId, lectureContents.id))
         .leftJoin(lectures, eq(lectures.id, lectureContents.lectureId))
@@ -317,7 +319,7 @@ userRoutes.get("/:id/courses", authMiddleware, async (c) => {
         );
 
       const solvedProblemsResult = await db
-        .select({ count: sql<{ count: number }[]>`COUNT(DISTINCT sql_problem_contents.id)` })
+        .select({ count: sql<number>`COUNT(DISTINCT sql_problem_contents.id)` })
         .from(sqlSolutions)
         .leftJoin(sqlProblemContents, eq(sqlSolutions.sqlProblemId, sqlProblemContents.id))
         .leftJoin(lectureContents, and(

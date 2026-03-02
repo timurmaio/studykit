@@ -66,4 +66,65 @@ export async function apiDelete<T>(path: string): Promise<T> {
   return handleResponse<T>(response);
 }
 
+export interface SqlSolutionStreamResult {
+  succeed: boolean | null;
+  timeout?: boolean;
+}
+
+export function apiSqlSolutionStream(
+  solutionId: number,
+  onResult: (result: SqlSolutionStreamResult) => void
+): () => void {
+  const url = `${API_URL}/api/sql_solutions/${solutionId}/stream`;
+  const controller = new AbortController();
+
+  fetch(url, {
+    credentials: "include",
+    signal: controller.signal,
+  })
+    .then(async (response) => {
+      if (!response.ok || !response.body) {
+        onResult({ succeed: null });
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
+
+        for (const block of lines) {
+          const eventMatch = block.match(/^event:\s*(\S+)/m);
+          const dataMatch = block.match(/^data:\s*([\s\S]*)/m);
+
+          if (eventMatch?.[1] === "result" && dataMatch?.[1]) {
+            try {
+              const parsed = JSON.parse(dataMatch[1].trim()) as SqlSolutionStreamResult;
+              onResult(parsed);
+            } catch {
+              onResult({ succeed: null });
+            }
+            return;
+          }
+          if (eventMatch?.[1] === "error") {
+            onResult({ succeed: null });
+            return;
+          }
+        }
+      }
+    })
+    .catch(() => {
+      onResult({ succeed: null });
+    });
+
+  return () => controller.abort();
+}
+
 export { API_URL };

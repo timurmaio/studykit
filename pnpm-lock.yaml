@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      lockfile:
+        specifier: ^1.0.4
+        version: 1.0.4
     devDependencies:
       drizzle-orm:
         specifier: ^0.44.5
@@ -106,6 +110,18 @@ packages:
       sqlite3:
         optional: true
 
+  lockfile@1.0.4:
+    resolution: {integrity: sha512-cvbTwETRfsFh4nHsL1eGWapU1XFi5Ot9E85sWAwia7Y7EgB7vfqcZhTKZ+l7hCGxSPoushMv5GKhT5PdLv03WA==}
+
+  signal-exit@3.0.7:
+    resolution: {integrity: sha512-wnD2ZE+l+SPC/uoS0vXeE9L1+0wuaMqKlfz9AMUo38JsyLSBWSFcHR1Rri62LZc12vLr1gb3jl7iwQhgwpAbGQ==}
+
 snapshots:
 
   drizzle-orm@0.44.7: {}
+
+  lockfile@1.0.4:
+    dependencies:
+      signal-exit: 3.0.7
+
+  signal-exit@3.0.7: {}

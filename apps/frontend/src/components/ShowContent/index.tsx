@@ -2,8 +2,9 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { useAuth } from "../../contexts/AuthContext";
-import { apiGet, apiPost } from "../../config";
+import { apiGet, apiPost, apiSqlSolutionStream } from "../../config";
 import { SQL_HINTS } from "../../constants/sqlHints";
+import { SqlProblemForm } from "./SqlProblemForm";
 import arrow from "./arrow-back.svg";
 import lection from "./lection.svg";
 import test from "./test.svg";
@@ -32,7 +33,7 @@ export function ShowContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isHintOpen, setIsHintOpen] = useState(false);
   const [isHintCopied, setIsHintCopied] = useState(false);
-  const pollingRef = useRef<number | null>(null);
+  const streamAbortRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     if (!id || !lectureId || !contentId) {
@@ -49,9 +50,9 @@ export function ShowContent() {
     setSucceed(null);
     setIsHintOpen(false);
     setIsHintCopied(false);
-    if (pollingRef.current !== null) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
+    if (streamAbortRef.current) {
+      streamAbortRef.current();
+      streamAbortRef.current = null;
     }
 
     // Track progress via API (don't block the UI)
@@ -118,9 +119,9 @@ export function ShowContent() {
         });
     }
     return () => {
-      if (pollingRef.current !== null) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
+      if (streamAbortRef.current) {
+        streamAbortRef.current();
+        streamAbortRef.current = null;
       }
     };
   }, [id, lectureId, contentId, authUser?.id]);
@@ -134,9 +135,9 @@ export function ShowContent() {
     setAlert("");
     setCheckingInformation("");
     setSucceed(null);
-    if (pollingRef.current !== null) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
+    if (streamAbortRef.current) {
+      streamAbortRef.current();
+      streamAbortRef.current = null;
     }
 
     apiPost<{ id: number }>("/api/sql_solutions", {
@@ -149,24 +150,19 @@ export function ShowContent() {
         const solutionId = response.id;
         setCheckingInformation("Идёт проверка...");
 
-        const waitingForSolution = window.setInterval(() => {
-          apiGet<{ succeed: boolean }>(`/api/sql_solutions/${solutionId}`)
-            .then((pollRes) => {
-              if (pollRes.succeed === true) {
-                setCheckingInformation("Решение верно!");
-                setSucceed(true);
-                clearInterval(waitingForSolution);
-                pollingRef.current = null;
-              } else if (pollRes.succeed === false) {
-                setCheckingInformation("Решение неверно, попробуйте ещё раз!");
-                setSucceed(false);
-                clearInterval(waitingForSolution);
-                pollingRef.current = null;
-              }
-            })
-            .catch(() => {});
-        }, 1000);
-        pollingRef.current = waitingForSolution;
+        streamAbortRef.current = apiSqlSolutionStream(solutionId, (result) => {
+          streamAbortRef.current = null;
+          if (result.timeout) {
+            setCheckingInformation("Проверка занимает длительное время, обновите страницу.");
+            setSucceed(null);
+          } else if (result.succeed === true) {
+            setCheckingInformation("Решение верно!");
+            setSucceed(true);
+          } else if (result.succeed === false) {
+            setCheckingInformation("Решение неверно, попробуйте ещё раз!");
+            setSucceed(false);
+          }
+        });
       })
       .catch((err: unknown) => {
         const errorText = (err as { errors?: string | string[] })?.errors;
@@ -349,67 +345,19 @@ export function ShowContent() {
                 ) : null}
                 <div className="form-group mx-8">
                   {content?.type === "SqlProblemContent" && (
-                    <form className="show-sql-form">
-                      <label htmlFor="solutionTextarea" className="show-sql-label">
-                        Введите сюда свое решение
-                      </label>
-                      {sqlHint ? (
-                        <div className="show-sql-hint-wrap">
-                          <button
-                            type="button"
-                            className="show-sql-hint-toggle"
-                            onClick={() => setIsHintOpen((prev) => !prev)}
-                          >
-                            {isHintOpen ? "Скрыть подсказку" : "Показать подсказку"}
-                          </button>
-                          {isHintOpen ? (
-                            <div className="show-sql-hint-popover">
-                              <div className="show-sql-hint-header">
-                                <span>Правильный SQL</span>
-                                <button
-                                  type="button"
-                                  className="show-sql-copy"
-                                  onClick={copyHint}
-                                >
-                                  {isHintCopied ? "Скопировано" : "Скопировать"}
-                                </button>
-                              </div>
-                              <pre className="show-sql-hint-code">{sqlHint}</pre>
-                            </div>
-                          ) : null}
-                        </div>
-                      ) : null}
-                      <textarea
-                        className="form-control mb-4 show-sql-textarea"
-                        name="solution"
-                        id="solutionTextarea"
-                        rows={6}
-                        value={solution}
-                        onChange={(event) => setSolution(event.target.value)}
-                      />
-                      <button
-                        className="button mb-4 show-sql-button"
-                        onClick={checkTheSolution}
-                      >
-                        Отправить решение
-                      </button>
-                      {alert ? (
-                        <div className="alert alert-danger">{alert}</div>
-                      ) : null}
-                      {checkingInformation ? (
-                        <div
-                          className={`alert ${
-                            succeed === true
-                              ? "alert-success"
-                              : succeed === false
-                              ? "alert-danger"
-                              : "alert-info"
-                          }`}
-                        >
-                          {checkingInformation}
-                        </div>
-                      ) : null}
-                    </form>
+                    <SqlProblemForm
+                      solution={solution}
+                      onSolutionChange={setSolution}
+                      onCheck={checkTheSolution}
+                      alert={alert}
+                      checkingInformation={checkingInformation}
+                      succeed={succeed}
+                      sqlHint={sqlHint}
+                      isHintOpen={isHintOpen}
+                      onHintToggle={() => setIsHintOpen((prev) => !prev)}
+                      isHintCopied={isHintCopied}
+                      onCopyHint={copyHint}
+                    />
                   )}
                 </div>
 

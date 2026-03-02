@@ -474,7 +474,7 @@ courseRoutes.get("/:id/progress", authMiddleware, async (c) => {
       lectureContents,
       and(eq(lectureContents.actableType, "SqlProblemContent"), eq(lectureContents.actableId, sqlProblemContents.id))
     )
-    .where(inArray(sqlProblemContents.id, Array.from(solvedIds)));
+    .where(inArray(sqlProblemContents.id, Array.from(solvedIds).filter((id): id is number => id != null)));
 
   const solvedContentIdSet = new Set(solvedContentIds.map((r) => r.lectureContentId).filter(Boolean));
 

@@ -1,16 +1,68 @@
-import { useEffect, useState } from "react";
+import { useReducer } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { apiGet, apiPut } from "../../config";
+import { apiPut } from "../../config";
+import { useProfileLoaderData } from "../../routes";
+
+interface ProfileState {
+  user: { firstName: string; lastName: string; email: string };
+  isEditing: boolean;
+  editForm: { firstName: string; lastName: string };
+  isSaving: boolean;
+  courses: unknown[];
+}
+
+type ProfileAction =
+  | { type: "SET_USER"; payload: { firstName: string; lastName: string; email: string } }
+  | { type: "SET_EDIT_FORM"; payload: { firstName?: string; lastName?: string } }
+  | { type: "SET_IS_EDITING"; payload: boolean }
+  | { type: "SET_IS_SAVING"; payload: boolean }
+  | { type: "SET_COURSES"; payload: unknown[] }
+  | { type: "RESET_USER" };
+
+function profileReducer(state: ProfileState, action: ProfileAction): ProfileState {
+  switch (action.type) {
+    case "SET_USER":
+      return {
+        ...state,
+        user: action.payload,
+        editForm: { firstName: action.payload.firstName, lastName: action.payload.lastName },
+      };
+    case "SET_EDIT_FORM":
+      return { ...state, editForm: { ...state.editForm, ...action.payload } };
+    case "SET_IS_EDITING":
+      return { ...state, isEditing: action.payload };
+    case "SET_IS_SAVING":
+      return { ...state, isSaving: action.payload };
+    case "SET_COURSES":
+      return { ...state, courses: action.payload };
+    case "RESET_USER":
+      return {
+        ...state,
+        user: { firstName: "", lastName: "", email: "" },
+        editForm: { firstName: "", lastName: "" },
+      };
+    default:
+      return state;
+  }
+}
 
 export function Profile() {
   const navigate = useNavigate();
   const { user: authUser, signOut } = useAuth();
-  const [user, setUser] = useState({ firstName: "", lastName: "", email: "" });
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ firstName: "", lastName: "" });
-  const [isSaving, setIsSaving] = useState(false);
-  const [courses, setCourses] = useState<unknown[]>([]);
+  const { user: loaderUser, courses: loaderCourses } = useProfileLoaderData();
+
+  const initialState: ProfileState = {
+    user: loaderUser ?? { firstName: "", lastName: "", email: "" },
+    isEditing: false,
+    editForm: loaderUser
+      ? { firstName: loaderUser.firstName, lastName: loaderUser.lastName }
+      : { firstName: "", lastName: "" },
+    isSaving: false,
+    courses: loaderCourses ?? [],
+  };
+
+  const [state, dispatch] = useReducer(profileReducer, initialState);
 
   const handleSignOut = () => {
     signOut();
@@ -18,63 +70,38 @@ export function Profile() {
     navigate("/signin");
   };
 
-  useEffect(() => {
-    const userId = authUser?.id;
-    if (!userId) {
-      return;
-    }
-
-    apiGet<{ firstName: string; lastName: string; email: string }>(
-      `/api/users/${userId}`
-    )
-      .then((data) => {
-        setUser({
-          firstName: data.firstName || "",
-          lastName: data.lastName || "",
-          email: data.email || "",
-        });
-        setEditForm({
-          firstName: data.firstName || "",
-          lastName: data.lastName || "",
-        });
-      })
-      .catch(() => {
-        setUser({ firstName: "", lastName: "", email: "" });
-      });
-
-    apiGet<unknown[]>(`/api/users/${userId}/courses`)
-      .then((data) => setCourses(data || []))
-      .catch(() => setCourses([]));
-  }, []);
 
   const handleSaveProfile = async () => {
     const userId = authUser?.id;
     if (!userId) return;
 
-    setIsSaving(true);
+    dispatch({ type: "SET_IS_SAVING", payload: true });
     try {
       const data = await apiPut<{ firstName: string; lastName: string; email: string }>(
         `/api/users/${userId}`,
         {
-          firstName: editForm.firstName,
-          lastName: editForm.lastName,
+          firstName: state.editForm.firstName,
+          lastName: state.editForm.lastName,
         }
       );
-      setUser({
-        firstName: data.firstName || "",
-        lastName: data.lastName || "",
-        email: data.email || "",
+      dispatch({
+        type: "SET_USER",
+        payload: {
+          firstName: data.firstName || "",
+          lastName: data.lastName || "",
+          email: data.email || "",
+        },
       });
-      setIsEditing(false);
+      dispatch({ type: "SET_IS_EDITING", payload: false });
     } catch {
       alert("Не удалось обновить профиль");
     } finally {
-      setIsSaving(false);
+      dispatch({ type: "SET_IS_SAVING", payload: false });
     }
   };
 
   const initials =
-    `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.trim() || "SK";
+    `${state.user.firstName.charAt(0)}${state.user.lastName.charAt(0)}`.trim() || "SK";
 
   return (
     <div className="mx-auto max-w-6xl px-4 profile-page">
@@ -85,17 +112,17 @@ export function Profile() {
             <div className="profile-card-body">
               <div className="profile-avatar">{initials}</div>
               <h2 className="profile-name mb-1">
-                {user.firstName || "Студент"} {user.lastName}
+                {state.user.firstName || "Студент"} {state.user.lastName}
               </h2>
               <p className="profile-email mb-5">
-                {user.email || "email@example.com"}
+                {state.user.email || "email@example.com"}
               </p>
               <button
                 className="button profile-action mb-3"
                 type="button"
-                onClick={() => setIsEditing(!isEditing)}
+                onClick={() => dispatch({ type: "SET_IS_EDITING", payload: !state.isEditing })}
               >
-                {isEditing ? "Отмена" : "Изменить профиль"}
+                {state.isEditing ? "Отмена" : "Изменить профиль"}
               </button>
               <button
                 className="button button--ghost profile-action"
@@ -111,16 +138,16 @@ export function Profile() {
           <div className="profile-info">
             <h2 className="profile-info-title mb-5">Личные данные</h2>
 
-            {isEditing ? (
+            {state.isEditing ? (
               <div className="profile-edit-form mb-5">
                 <div className="profile-field">
                   <span className="profile-label">Имя</span>
                   <input
                     type="text"
                     className="input"
-                    value={editForm.firstName}
+                    value={state.editForm.firstName}
                     onChange={(e) =>
-                      setEditForm({ ...editForm, firstName: e.target.value })
+                      dispatch({ type: "SET_EDIT_FORM", payload: { firstName: e.target.value } })
                     }
                     placeholder="Введите имя"
                   />
@@ -130,9 +157,9 @@ export function Profile() {
                   <input
                     type="text"
                     className="input"
-                    value={editForm.lastName}
+                    value={state.editForm.lastName}
                     onChange={(e) =>
-                      setEditForm({ ...editForm, lastName: e.target.value })
+                      dispatch({ type: "SET_EDIT_FORM", payload: { lastName: e.target.value } })
                     }
                     placeholder="Введите фамилию"
                   />
@@ -141,34 +168,34 @@ export function Profile() {
                   className="button mt-4"
                   type="button"
                   onClick={handleSaveProfile}
-                  disabled={isSaving}
+                  disabled={state.isSaving}
                 >
-                  {isSaving ? "Сохранение..." : "Сохранить"}
+                  {state.isSaving ? "Сохранение..." : "Сохранить"}
                 </button>
               </div>
             ) : (
               <div className="profile-grid">
                 <div className="profile-field">
                   <span className="profile-label">Имя</span>
-                  <strong>{user.firstName || "—"}</strong>
+                  <strong>{state.user.firstName || "—"}</strong>
                 </div>
                 <div className="profile-field">
                   <span className="profile-label">Фамилия</span>
-                  <strong>{user.lastName || "—"}</strong>
+                  <strong>{state.user.lastName || "—"}</strong>
                 </div>
                 <div className="profile-field profile-field--full">
                   <span className="profile-label">Почта</span>
-                  <strong>{user.email || "—"}</strong>
+                  <strong>{state.user.email || "—"}</strong>
                 </div>
               </div>
             )}
           </div>
 
-          {courses.length > 0 && (
+          {state.courses.length > 0 && (
             <div className="profile-info mt-6">
               <h2 className="profile-info-title mb-5">Мои курсы</h2>
               <div className="courses-list">
-                {(courses as { id: number; title: string; progress: { percentage: number; completedContent: number; totalContent: number; solvedProblems: number } }[]).map((course) => (
+                {(state.courses as { id: number; title: string; progress: { percentage: number; completedContent: number; totalContent: number; solvedProblems: number } }[]).map((course) => (
                   <div key={course.id} className="course-item mb-4">
                     <div className="course-item-header">
                       <span className="course-item-title">{course.title}</span>

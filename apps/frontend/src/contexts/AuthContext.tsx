@@ -31,33 +31,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(() => {
     apiPost("/api/users/logout").catch(() => {});
-    sessionStorage.removeItem("user_id");
     setUser(null);
   }, []);
 
   useEffect(() => {
     apiGet<User>("/api/users/me")
-      .then((data) => {
-        sessionStorage.setItem("user_id", String(data.id));
-        setUser(data);
-      })
-      .catch(() => {
-        sessionStorage.removeItem("user_id");
-        setUser(null);
-      })
+      .then((data) => setUser(data))
+      .catch(() => setUser(null))
       .finally(() => setIsLoading(false));
   }, []);
 
   const refreshUser = useCallback(() => {
     apiGet<User>("/api/users/me")
-      .then((data) => {
-        sessionStorage.setItem("user_id", String(data.id));
-        setUser(data);
-      })
-      .catch(() => {
-        sessionStorage.removeItem("user_id");
-        setUser(null);
-      });
+      .then((data) => setUser(data))
+      .catch(() => setUser(null));
   }, []);
 
   useEffect(() => {

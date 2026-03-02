@@ -1,3 +1,4 @@
+import Redis from "ioredis";
 import { Worker } from "bullmq";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { eq } from "drizzle-orm";
@@ -12,6 +13,7 @@ if (!REDIS_URL || !DATABASE_URL) {
   throw new Error("REDIS_URL and DATABASE_URL are required");
 }
 
+const redisPub = new Redis(REDIS_URL, { maxRetriesPerRequest: null });
 const pg = postgres(DATABASE_URL, { max: 5, prepare: false });
 const db = drizzle(pg);
 
@@ -91,10 +93,13 @@ async function evaluateSolution(solutionId: number): Promise<boolean | null> {
   });
 }
 
+const SQL_SOLUTION_CHANNEL = "sql:solution";
+
 const worker = new Worker<CheckJob>(
   "sql-solution-check",
   async (job) => {
     const succeed = await evaluateSolution(job.data.solutionId);
+    const solutionId = job.data.solutionId;
 
     await db
       .update(sqlSolutions)
@@ -102,7 +107,12 @@ const worker = new Worker<CheckJob>(
         succeed,
         updatedAt: new Date(),
       })
-      .where(eq(sqlSolutions.id, job.data.solutionId));
+      .where(eq(sqlSolutions.id, solutionId));
+
+    await redisPub.publish(
+      `${SQL_SOLUTION_CHANNEL}:${solutionId}`,
+      JSON.stringify({ succeed })
+    );
   },
   {
     connection: { url: REDIS_URL },

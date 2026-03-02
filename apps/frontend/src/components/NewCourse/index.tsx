@@ -51,7 +51,7 @@ function NewCourse() {
           type="text"
           name="title"
           value={state.title}
-          className="form-control w-full"
+          className="block w-full py-2 px-3 text-base leading-snug text-[var(--color-text)] bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[6px] outline-none transition-colors duration-150 focus:border-[var(--color-accent)] focus-visible:outline-none focus-visible:[box-shadow:var(--focus-ring)] placeholder:text-[var(--color-text-muted)] disabled:bg-[var(--color-bg)] disabled:cursor-not-allowed"
           id="new-content-title"
           placeholder="Название лекции"
           onChange={handleInputChange as (e: React.ChangeEvent<HTMLInputElement>) => void}
@@ -66,7 +66,7 @@ function NewCourse() {
           type="text"
           name="serial"
           value={state.serial}
-          className="form-control w-full"
+          className="block w-full py-2 px-3 text-base leading-snug text-[var(--color-text)] bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[6px] outline-none transition-colors duration-150 focus:border-[var(--color-accent)] focus-visible:outline-none focus-visible:[box-shadow:var(--focus-ring)] placeholder:text-[var(--color-text-muted)] disabled:bg-[var(--color-bg)] disabled:cursor-not-allowed"
           id="new-content-serial"
           placeholder="Например: 3"
           onChange={handleInputChange as (e: React.ChangeEvent<HTMLInputElement>) => void}
@@ -78,7 +78,7 @@ function NewCourse() {
           Тип контента
         </label>
         <select
-          className="form-control w-full"
+          className="block w-full py-2 px-3 text-base leading-snug text-[var(--color-text)] bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[6px] outline-none transition-colors duration-150 focus:border-[var(--color-accent)] focus-visible:outline-none focus-visible:[box-shadow:var(--focus-ring)] placeholder:text-[var(--color-text-muted)] disabled:bg-[var(--color-bg)] disabled:cursor-not-allowed"
           name="type"
           id="new-content-type"
           value={state.type}
@@ -98,7 +98,7 @@ function NewCourse() {
           id="new-content-body"
           value={state.body}
           rows={6}
-          className="form-control w-full"
+          className="block w-full py-2 px-3 text-base leading-snug text-[var(--color-text)] bg-[var(--color-surface)] border border-[var(--color-border-strong)] rounded-[6px] outline-none transition-colors duration-150 focus:border-[var(--color-accent)] focus-visible:outline-none focus-visible:[box-shadow:var(--focus-ring)] placeholder:text-[var(--color-text-muted)] disabled:bg-[var(--color-bg)] disabled:cursor-not-allowed"
           onChange={handleInputChange as (e: React.ChangeEvent<HTMLTextAreaElement>) => void}
         />
       </TextField>

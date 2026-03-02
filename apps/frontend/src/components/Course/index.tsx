@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, SyntheticEvent } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useRevalidator } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useAuth } from "../../contexts/AuthContext";
 import { apiGet, apiPost, apiDelete } from "../../config";
+import { useCourseLoaderData } from "../../routes";
 import lection from "./lection.svg";
 import test from "./test.svg";
 import type { CourseItem, LectureContent } from "../../types/Course";
@@ -108,60 +110,45 @@ export function Course() {
   const defaultCourseAvatar =
     "https://cf-images.us-east-1.prod.boltdns.net/v1/static/62009828001/c04c4184-85ef-4a71-9313-8a6ae90b1157/785c0b4b-fbae-48ac-8a74-cfabb0c3921c/1280x720/match/image.jpg";
   const { id } = useParams();
+  const {
+    course: loaderCourse,
+    participating: loaderParticipating,
+    error: loaderError,
+  } = useCourseLoaderData();
 
-  const [course, setCourse] = useState<CourseItem | null>(null);
-  const [isParticipating, setIsParticipating] = useState<boolean | null>(null);
+  const [course, setCourse] = useState<CourseItem | null>(loaderCourse);
+  const [isParticipating, setIsParticipating] = useState<boolean | null>(
+    loaderParticipating
+  );
   const [alert, setAlert] = useState("");
   const [visitedContentIds, setVisitedContentIds] = useState<number[]>([]);
-  const [isCourseLoading, setIsCourseLoading] = useState(true);
-  const [courseError, setCourseError] = useState("");
+  const [courseError, setCourseError] = useState(loaderError ?? "");
   const [isJoining, setIsJoining] = useState(false);
   const [lastVisited, setLastVisited] = useState<LastVisited | null>(null);
+  const revalidator = useRevalidator();
+  const isCourseLoading = revalidator.state === "loading";
 
   const { user: authUser } = useAuth();
 
-  const loadCourse = useCallback(async () => {
-    if (!id) return;
+  const loadCourse = useCallback(() => {
+    revalidator.revalidate();
+  }, [revalidator]);
 
-    const userId = authUser?.id;
-
-    setIsCourseLoading(true);
-    setCourseError("");
+  const loadProgress = useCallback(() => {
+    if (!id || !authUser?.id) return;
     setLastVisited(loadLastVisited(id));
-
-    try {
-      const courseData = await apiGet<CourseItem>(`/api/courses/${id}`);
-      setCourse(courseData);
-    } catch {
-      setCourseError("Не удалось загрузить страницу курса");
-    } finally {
-      setIsCourseLoading(false);
-    }
-
-    try {
-      const participatingData = await apiGet<{ participating: boolean }>(
-        `/api/courses/${id}/participating`
-      );
-      setIsParticipating(participatingData.participating);
-    } catch {
-      setIsParticipating(null);
-    }
-
-    if (userId) {
-      try {
-        const progressData = await apiGet<{ viewedContentIds?: number[] }>(
-          `/api/courses/${id}/progress`
-        );
-        setVisitedContentIds(progressData.viewedContentIds || []);
-      } catch {
-        setVisitedContentIds([]);
-      }
-    }
+    apiGet<{ viewedContentIds?: number[] }>(`/api/courses/${id}/progress`)
+      .then((data) => setVisitedContentIds(data.viewedContentIds || []))
+      .catch(() => setVisitedContentIds([]));
   }, [id, authUser?.id]);
 
   useEffect(() => {
-    loadCourse();
-  }, [loadCourse]);
+    setCourse(loaderCourse);
+    setIsParticipating(loaderParticipating);
+    setCourseError(loaderError ?? "");
+    setLastVisited(id ? loadLastVisited(id) : null);
+    loadProgress();
+  }, [id, loaderCourse, loaderParticipating, loaderError, loadProgress]);
 
   const joinCourse = async () => {
     if (!id || isJoining) return;
@@ -335,18 +322,29 @@ export function Course() {
       <div className="course-decor course-decor--peach" aria-hidden="true" />
 
       {isCourseComplete && (
-        <div className="course-complete-banner" role="status">
+        <motion.div
+          className="course-complete-banner"
+          role="status"
+          initial={{ opacity: 0, y: -12, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+        >
           <span className="course-complete-banner__emoji" aria-hidden="true">🎉</span>
           <span className="course-complete-banner__text">
             Поздравляем — вы прошли курс полностью!
           </span>
           <span className="course-complete-banner__emoji" aria-hidden="true">🎓</span>
-        </div>
+        </motion.div>
       )}
 
       <div className="panel">
         {/* Hero */}
-        <div className="course-hero">
+        <motion.div
+          className="course-hero"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+        >
           <div className="course-hero__bg">
             <img src={avatarSrc} alt="" />
           </div>
@@ -399,7 +397,7 @@ export function Course() {
             {ctaSection}
             {alert && <div className="alert alert-warning course-hero__alert">{alert}</div>}
           </div>
-        </div>
+        </motion.div>
 
         {/* Curriculum */}
         {course.lectures.length === 0 ? (
