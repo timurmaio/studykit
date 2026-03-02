@@ -1,9 +1,11 @@
-import { useState, useEffect, SyntheticEvent } from "react";
+import { useState, useEffect, useCallback, SyntheticEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { API_URL, createAxios } from "../../config";
 import lection from "./lection.svg";
 import test from "./test.svg";
-import type { CourseItem } from "../../types/Course";
+import type { CourseItem, LectureContent } from "../../types/Course";
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
 
 const CheckIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -15,6 +17,13 @@ const ArrowLeftIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="19" y1="12" x2="5" y2="12" />
     <polyline points="12 19 5 12 12 5" />
+  </svg>
+);
+
+const ArrowRightIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="5" y1="12" x2="19" y2="12" />
+    <polyline points="12 5 19 12 12 19" />
   </svg>
 );
 
@@ -41,10 +50,64 @@ const BookIcon = () => (
   </svg>
 );
 
+const RefreshIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 4 23 10 17 10" />
+    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+  </svg>
+);
+
+const ClockIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="12 6 12 12 16 14" />
+  </svg>
+);
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const READING_SPEED_WPM = 200;
+
+function estimateReadingTime(content: LectureContent): string {
+  if (content.type === "SqlProblemContent") return "≈10 мин";
+  if (!content.body) return "≈2 мин";
+  const words = content.body.trim().split(/\s+/).length;
+  const minutes = Math.max(1, Math.round(words / READING_SPEED_WPM));
+  return `≈${minutes} мин`;
+}
+
+function getLastVisitedKey(courseId: string | number) {
+  return `last_visited_${courseId}`;
+}
+
+interface LastVisited {
+  lectureId: number;
+  contentId: number;
+  contentTitle: string;
+}
+
+function saveLastVisited(courseId: string | number, data: LastVisited) {
+  try {
+    localStorage.setItem(getLastVisitedKey(courseId), JSON.stringify(data));
+  } catch {}
+}
+
+function loadLastVisited(courseId: string | number): LastVisited | null {
+  try {
+    const raw = localStorage.getItem(getLastVisitedKey(courseId));
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export function Course() {
   const defaultCourseAvatar =
     "https://cf-images.us-east-1.prod.boltdns.net/v1/static/62009828001/c04c4184-85ef-4a71-9313-8a6ae90b1157/785c0b4b-fbae-48ac-8a74-cfabb0c3921c/1280x720/match/image.jpg";
   const { id } = useParams();
+
   const [course, setCourse] = useState<CourseItem | null>(null);
   const [isParticipating, setIsParticipating] = useState<boolean | null>(null);
   const [alert, setAlert] = useState("");
@@ -52,94 +115,61 @@ export function Course() {
   const [isCourseLoading, setIsCourseLoading] = useState(true);
   const [courseError, setCourseError] = useState("");
   const [isJoining, setIsJoining] = useState(false);
+  const [lastVisited, setLastVisited] = useState<LastVisited | null>(null);
 
-  useEffect(() => {
-    if (!id) {
-      return;
-    }
+  const loadCourse = useCallback(() => {
+    if (!id) return;
 
     const axios = createAxios();
     const userId = localStorage.getItem("user_id");
-    const courseId = Number(id);
 
     setIsCourseLoading(true);
     setCourseError("");
+    setLastVisited(loadLastVisited(id));
 
     axios
       .get(`${API_URL}/api/courses/${id}`)
-      .then((response: any) => {
-        setCourse(response.data);
-      })
-      .catch(() => {
-        setCourseError("Не удалось загрузить страницу курса");
-      })
-      .finally(() => {
-        setIsCourseLoading(false);
-      });
+      .then((response: any) => setCourse(response.data))
+      .catch(() => setCourseError("Не удалось загрузить страницу курса"))
+      .finally(() => setIsCourseLoading(false));
 
     axios
       .get(`${API_URL}/api/courses/${id}/participating`)
-      .then((response: any) => {
-        setIsParticipating(response.data.participating);
-      })
-      .catch(() => {
-        setIsParticipating(null);
-      });
+      .then((response: any) => setIsParticipating(response.data.participating))
+      .catch(() => setIsParticipating(null));
 
-    // Load progress from API
     if (userId) {
       axios
         .get(`${API_URL}/api/courses/${id}/progress`)
-        .then((response: any) => {
-          setVisitedContentIds(response.data.viewedContentIds || []);
-        })
-        .catch(() => {
-          setVisitedContentIds([]);
-        });
+        .then((response: any) => setVisitedContentIds(response.data.viewedContentIds || []))
+        .catch(() => setVisitedContentIds([]));
     }
-
   }, [id]);
 
-  const joinCourse = () => {
-    if (!id || isJoining) {
-      return;
-    }
+  useEffect(() => {
+    loadCourse();
+  }, [loadCourse]);
 
+  const joinCourse = () => {
+    if (!id || isJoining) return;
     setIsJoining(true);
     const axios = createAxios();
     axios
       .post(`${API_URL}/api/courses/${id}/join`)
-      .then(() => {
-        setIsParticipating(true);
-        setAlert("");
-      })
-      .catch((error: any) => {
-        setAlert(error?.response?.data?.errors || "Не удалось подписаться");
-      })
-      .finally(() => {
-        setIsJoining(false);
-      });
+      .then(() => { setIsParticipating(true); setAlert(""); })
+      .catch((error: any) => setAlert(error?.response?.data?.errors || "Не удалось подписаться"))
+      .finally(() => setIsJoining(false));
   };
 
   const leaveCourse = () => {
-    if (!id || isJoining) {
-      return;
-    }
-
+    if (!id || isJoining) return;
     setIsJoining(true);
     const axios = createAxios();
     axios
       .delete(`${API_URL}/api/courses/${id}/leave`)
-      .then(() => {
-        setIsParticipating(false);
-        setAlert("");
-      })
-      .catch((error: any) => {
-        setAlert(error?.response?.data?.errors || "Не удалось отписаться");
-      })
-      .finally(() => {
-        setIsJoining(false);
-      });
+      .then(() => { setIsParticipating(false); setAlert(""); })
+      .catch((error: any) => setAlert(error?.response?.data?.errors || "Не удалось отписаться"))
+      .finally(() => setIsJoining(false));
   };
 
   const checkAccessToContent = (event: SyntheticEvent) => {
@@ -153,28 +183,7 @@ export function Course() {
     }
   };
 
-  const joinButton = isParticipating ? (
-    <button 
-      className="button button--secondary mb-16" 
-      onClick={leaveCourse}
-      disabled={isJoining}
-    >
-      {isJoining ? "Загрузка..." : "Отписаться"}
-    </button>
-  ) : (
-    <button 
-      className="button mb-16" 
-      onClick={joinCourse}
-      disabled={isJoining}
-    >
-      {isJoining ? "Загрузка..." : "Подписаться на курс"}
-    </button>
-  );
-
-  const Alert = alert ? (
-    <div className="alert alert-warning">{alert}</div>
-  ) : null;
-
+  // ── Loading ────────────────────────────────────────────────────────────────
   if (isCourseLoading) {
     return (
       <div className="container course-page">
@@ -182,84 +191,140 @@ export function Course() {
         <div className="course-decor course-decor--peach" aria-hidden="true" />
         <div className="panel">
           <div className="course-skeleton-hero" />
-          <div className="row">
-            <div className="col-12 col-lg-4">
-              <div className="course-skeleton-panel" style={{ height: 200 }} />
-            </div>
-            <div className="col-12 col-lg-8">
-              <div className="course-skeleton-lecture" />
-              <div className="course-skeleton-lecture" />
-              <div className="course-skeleton-lecture" />
-            </div>
+          <div style={{ padding: "0 24px 24px" }}>
+            <div className="course-skeleton-lecture" />
+            <div className="course-skeleton-lecture" style={{ animationDelay: "80ms" }} />
+            <div className="course-skeleton-lecture" style={{ animationDelay: "160ms" }} />
           </div>
         </div>
       </div>
     );
   }
 
+  // ── Error ──────────────────────────────────────────────────────────────────
   if (courseError) {
     return (
       <div className="container course-page">
-        <div className="alert alert-warning">{courseError}</div>
+        <div className="course-error-state panel">
+          <div className="course-error-icon" aria-hidden="true">⚠</div>
+          <h2 className="course-error-title">Не удалось загрузить курс</h2>
+          <p className="course-error-desc">{courseError}</p>
+          <button className="button course-error-retry" onClick={loadCourse}>
+            <RefreshIcon />
+            Попробовать снова
+          </button>
+          <Link to="/courses" className="course-error-back">
+            <ArrowLeftIcon />
+            Все курсы
+          </Link>
+        </div>
       </div>
     );
   }
 
-  if (!course) {
-    return null;
-  }
+  if (!course) return null;
 
+  // ── Computed ───────────────────────────────────────────────────────────────
   const avatarSrc = course.avatar || defaultCourseAvatar;
+
   const rawCreatedAt = Number(course.createdAt);
-  const createdAtMilliseconds =
+  const createdAtMs =
     Number.isFinite(rawCreatedAt) && rawCreatedAt < 10_000_000_000
       ? rawCreatedAt * 1000
       : rawCreatedAt;
-  const createdDate = Number.isFinite(createdAtMilliseconds)
-    ? new Date(createdAtMilliseconds).toLocaleDateString("ru-RU", {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      })
+  const createdDate = Number.isFinite(createdAtMs)
+    ? new Date(createdAtMs).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })
     : String(course.createdAt);
-  const totalLessons = course.lectures.reduce(
-    (accumulator, lecture) => accumulator + lecture.content.length,
-    0
-  );
-  const validLessonIds = new Set(
-    course.lectures.flatMap((lecture) => lecture.content.map((content) => content.id))
-  );
+
+  const totalLessons = course.lectures.reduce((acc, l) => acc + l.content.length, 0);
+  const validLessonIds = new Set(course.lectures.flatMap((l) => l.content.map((c) => c.id)));
   const solvedIds = Array.isArray(course.solvedIds) ? course.solvedIds : [];
-  const filteredVisitedIds = visitedContentIds.filter((id) => validLessonIds.has(id));
-  const filteredSolvedIds = solvedIds.filter((id) => validLessonIds.has(id));
-  const completedLessonIds = Array.from(
-    new Set([...filteredVisitedIds, ...filteredSolvedIds])
-  );
-  const rawProgress = totalLessons
-    ? Math.round((completedLessonIds.length / totalLessons) * 100)
+  const filteredVisitedIds = visitedContentIds.filter((cid) => validLessonIds.has(cid));
+  const filteredSolvedIds = solvedIds.filter((cid) => validLessonIds.has(cid));
+  const completedLessonIds = Array.from(new Set([...filteredVisitedIds, ...filteredSolvedIds]));
+  const learningProgress = totalLessons
+    ? Math.min(100, Math.max(0, Math.round((completedLessonIds.length / totalLessons) * 100)))
     : 0;
-  const learningProgress = Math.min(100, Math.max(0, rawProgress));
+  const isCourseComplete = isParticipating && totalLessons > 0 && learningProgress === 100;
 
-  const progressSection = isParticipating ? (
-    <div className="course-progress-section mb-20">
-      <div className="course-progress-bar">
-        <div 
-          className="course-progress-bar__fill" 
-          style={{ width: `${learningProgress}%` }}
-        />
+  // First lesson that hasn't been completed — for "Start" CTA
+  const firstUnvisited = (() => {
+    for (const lecture of course.lectures) {
+      for (const content of lecture.content) {
+        if (!completedLessonIds.includes(content.id)) {
+          return { lectureId: lecture.id, contentId: content.id, contentTitle: content.title };
+        }
+      }
+    }
+    return null;
+  })();
+
+  // ── CTA logic ──────────────────────────────────────────────────────────────
+  let ctaSection: React.ReactNode = null;
+
+  if (!isParticipating) {
+    ctaSection = (
+      <div className="course-hero__actions">
+        <button className="button" onClick={joinCourse} disabled={isJoining}>
+          {isJoining ? "Загрузка..." : "Подписаться на курс"}
+        </button>
       </div>
-      <p className="course-progress-text">
-        Прогресс по курсу: <strong>{learningProgress}%</strong>
-      </p>
-    </div>
-  ) : null;
+    );
+  } else if (isCourseComplete) {
+    ctaSection = (
+      <div className="course-hero__actions">
+        <button className="button button--secondary" onClick={leaveCourse} disabled={isJoining}>
+          {isJoining ? "Загрузка..." : "Отписаться"}
+        </button>
+      </div>
+    );
+  } else if (lastVisited) {
+    ctaSection = (
+      <div className="course-hero__actions">
+        <Link
+          to={`/courses/${id}/lectures/${lastVisited.lectureId}/contents/${lastVisited.contentId}`}
+          className="button course-resume-btn"
+        >
+          <ArrowRightIcon />
+          Продолжить обучение
+        </Link>
+        <p className="course-resume-hint">
+          Последний урок: {lastVisited.contentTitle}
+        </p>
+      </div>
+    );
+  } else if (firstUnvisited) {
+    ctaSection = (
+      <div className="course-hero__actions">
+        <Link
+          to={`/courses/${id}/lectures/${firstUnvisited.lectureId}/contents/${firstUnvisited.contentId}`}
+          className="button"
+        >
+          Начать обучение
+          <ArrowRightIcon />
+        </Link>
+      </div>
+    );
+  }
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="container course-page">
       <div className="course-decor course-decor--mint" aria-hidden="true" />
       <div className="course-decor course-decor--peach" aria-hidden="true" />
 
+      {isCourseComplete && (
+        <div className="course-complete-banner" role="status">
+          <span className="course-complete-banner__emoji" aria-hidden="true">🎉</span>
+          <span className="course-complete-banner__text">
+            Поздравляем — вы прошли курс полностью!
+          </span>
+          <span className="course-complete-banner__emoji" aria-hidden="true">🎓</span>
+        </div>
+      )}
+
       <div className="panel">
+        {/* Hero */}
         <div className="course-hero">
           <div className="course-hero__bg">
             <img src={avatarSrc} alt="" />
@@ -270,12 +335,14 @@ export function Course() {
               Все курсы
             </Link>
             <div className="course-hero__chips">
-              <span className="course-hero__chip">{course.type}</span>
+              {course.type && <span className="course-hero__chip">{course.type}</span>}
               <span className="course-hero__chip">{totalLessons} уроков</span>
               <span className="course-hero__chip">практика + лекции</span>
             </div>
             <h1 className="course-hero__title">{course.title}</h1>
-            <p className="course-hero__description">{course.description}</p>
+            {course.description && (
+              <p className="course-hero__description">{course.description}</p>
+            )}
             <div className="course-hero__meta">
               <div className="course-hero__meta-item">
                 <UserIcon />
@@ -287,78 +354,119 @@ export function Course() {
               </div>
               <div className="course-hero__meta-item">
                 <BookIcon />
-                {course.lectures.length} разделов
+                {course.lectures.length} {course.lectures.length === 1 ? "раздел" : "разделов"}
               </div>
             </div>
+
+            {isParticipating && totalLessons > 0 && (
+              <div className="course-hero__progress">
+                <div className="course-progress-bar">
+                  <div
+                    className="course-progress-bar__fill"
+                    style={{ width: `${learningProgress}%` }}
+                  />
+                </div>
+                <p className="course-progress-text">
+                  Прогресс: <strong>{learningProgress}%</strong>
+                  <span className="course-progress-count">
+                    {completedLessonIds.length} из {totalLessons}
+                  </span>
+                </p>
+              </div>
+            )}
+
+            {ctaSection}
+            {alert && <div className="alert alert-warning course-hero__alert">{alert}</div>}
           </div>
         </div>
 
-        <div className="row">
-          <div className="col-12 col-lg-4 mb-24">
-            <div className="panel course-overview">
-              <div className="mx-32 course-overview-content">
-                {progressSection}
-                {joinButton}
-                {Alert}
-              </div>
+        {/* Curriculum */}
+        {course.lectures.length === 0 ? (
+          <div className="course-empty-state">
+            <div className="course-empty-icon" aria-hidden="true">
+              <BookIcon />
             </div>
+            <p className="course-empty-title">Уроки ещё не добавлены</p>
+            <p className="course-empty-desc">
+              Автор работает над материалами курса. Загляните позже.
+            </p>
           </div>
-          <div className="col-12 col-lg-8">
-            <div className="panel course-roadmap">
-              <header className="ml-32 mt-24 fs-24 mb-20 course-title">
-                Программа курса
-              </header>
+        ) : (
+          <div className="course-roadmap">
+            <header className="ml-32 mt-24 fs-24 mb-20 course-title">
+              Программа курса
+            </header>
 
-              {course.lectures.map((lecture, lectureIndex) => {
-                const lectureDoneCount = lecture.content.filter(
-                  (c) => completedLessonIds.includes(c.id)
-                ).length;
-                return (
-                  <div
-                    className="mx-32 mb-20 course-lecture-card"
-                    key={lecture.id}
-                  >
-                    <p className="fs-20 mb-8 course-lecture-title">
-                      <span>{lecture.title}</span>
-                      {isParticipating && (
-                        <span className="course-lecture-progress">
-                          {lectureDoneCount}/{lecture.content.length}
+            {course.lectures.map((lecture) => {
+              const lectureDoneCount = lecture.content.filter((c) =>
+                completedLessonIds.includes(c.id)
+              ).length;
+              const isLectureComplete =
+                lecture.content.length > 0 && lectureDoneCount === lecture.content.length;
+
+              return (
+                <div className="mx-32 mb-20 course-lecture-card" key={lecture.id}>
+                  <p className={`fs-20 mb-8 course-lecture-title ${isLectureComplete ? "course-lecture-title--done" : ""}`}>
+                    <span className="course-lecture-title__text">
+                      {isLectureComplete && (
+                        <span className="course-lecture-check" aria-label="Раздел завершён">
+                          <CheckIcon />
                         </span>
                       )}
-                    </p>
-                    {lecture.content.map((content) => {
+                      {lecture.title}
+                    </span>
+                    {isParticipating && (
+                      <span className="course-lecture-progress">
+                        {lectureDoneCount}/{lecture.content.length}
+                      </span>
+                    )}
+                  </p>
+
+                  {lecture.content.length === 0 ? (
+                    <p className="course-lecture-empty">Уроки не добавлены</p>
+                  ) : (
+                    lecture.content.map((content) => {
                       const contentIcon =
                         content.type === "MarkdownContent" ? lection : test;
                       const isVisited = filteredVisitedIds.includes(content.id);
                       const isSolved = filteredSolvedIds.includes(content.id);
                       const isDone = isVisited || isSolved;
+                      const readingTime = estimateReadingTime(content);
+
                       return (
                         <Link
                           key={content.id}
                           to={`/courses/${id}/lectures/${lecture.id}/contents/${content.id}`}
-                          className={`link course-lesson ${
-                            isDone ? "course-lesson--done" : ""
-                          }`}
-                          onClick={checkAccessToContent}
+                          className={`link course-lesson ${isDone ? "course-lesson--done" : ""}`}
+                          onClick={(e) => {
+                            checkAccessToContent(e);
+                            if (isParticipating) {
+                              saveLastVisited(id!, {
+                                lectureId: lecture.id,
+                                contentId: content.id,
+                                contentTitle: content.title,
+                              });
+                            }
+                          }}
                         >
                           <div className="list-item course-lesson-row">
                             {isParticipating && (
                               <span
-                                className={`circle ${
-                                  isDone ? "circle--green" : ""
-                                } ml-8 mr-16`}
+                                className={`circle ${isDone ? "circle--green" : ""} ml-8 mr-16`}
                               />
                             )}
                             <img
                               src={contentIcon}
                               className="mr-16"
-                              alt="Иконка контента"
+                              alt={content.type === "MarkdownContent" ? "Лекция" : "Задание"}
                             />
-                            <span className="course-lesson-title">
-                              {content.title}
+                            <span className="course-lesson-title">{content.title}</span>
+                            <span className="course-lesson-time">
+                              <ClockIcon />
+                              {readingTime}
                             </span>
                             {isParticipating && isDone && (
-                              <span className="ml-16 fs-12 course-lesson-status">
+                              <span className="ml-8 fs-12 course-lesson-status">
                                 <CheckIcon />
                                 Пройдено
                               </span>
@@ -366,13 +474,13 @@ export function Course() {
                           </div>
                         </Link>
                       );
-                    })}
-                  </div>
-                );
-              })}
-            </div>
+                    })
+                  )}
+                </div>
+              );
+            })}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

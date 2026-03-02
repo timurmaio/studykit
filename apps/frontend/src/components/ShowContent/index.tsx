@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import { API_URL, createAxios } from "../../config";
@@ -7,6 +7,13 @@ import arrow from "./arrow-back.svg";
 import lection from "./lection.svg";
 import test from "./test.svg";
 import { CourseItem, LectureContent } from "../../types/Course";
+
+const ArrowRightIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="5" y1="12" x2="19" y2="12" />
+    <polyline points="12 5 19 12 12 19" />
+  </svg>
+);
 
 export function ShowContent() {
   const { id, lectureId, contentId } = useParams();
@@ -53,11 +60,25 @@ export function ShowContent() {
       }).catch(() => {});
     }
 
+    // Save last visited for "Resume" CTA on course page
+    // We'll update it once course data loads and we know the content title
+    const updateLastVisited = (contentTitle: string) => {
+      try {
+        localStorage.setItem(
+          `last_visited_${courseId}`,
+          JSON.stringify({ lectureId: Number(lectureId), contentId: currentContentId, contentTitle })
+        );
+      } catch {}
+    };
+
     axios
       .get(`${API_URL}/api/lectures/${lectureId}/content/${contentId}`)
       .then((response: any) => {
         setContent(response.data);
         setContentError("");
+        if (response.data?.title) {
+          updateLastVisited(response.data.title);
+        }
       })
       .catch((error: any) => {
         const errorText = error?.response?.data?.errors;
@@ -183,9 +204,48 @@ export function ShowContent() {
   };
 
   const passStatistics = isParticipating ? (
-    <p className="course-progress-text">
-      Прогресс по курсу: <strong>{statistics}%</strong>
-    </p>
+    <div className="course-progress-section mb-16">
+      <div className="course-progress-bar">
+        <div
+          className="course-progress-bar__fill"
+          style={{ width: `${statistics}%` }}
+        />
+      </div>
+      <p className="course-progress-text">
+        Прогресс: <strong>{statistics}%</strong>
+      </p>
+    </div>
+  ) : null;
+
+  const navigationData = useMemo(() => {
+    if (!course) return null;
+
+    const allContents: Array<{ lectureId: number; contentId: number }> = [];
+    course.lectures.forEach((lecture) => {
+      lecture.content.forEach((content) => {
+        allContents.push({ lectureId: lecture.id, contentId: content.id });
+      });
+    });
+
+    const currentIndex = allContents.findIndex(
+      (c) => c.contentId === Number(contentId)
+    );
+
+    const nextContent = currentIndex >= 0 && currentIndex < allContents.length - 1
+      ? allContents[currentIndex + 1]
+      : null;
+
+    return { allContents, currentIndex, nextContent };
+  }, [course, contentId]);
+
+  const nextLessonButton = navigationData?.nextContent ? (
+    <Link
+      to={`/courses/${id}/lectures/${navigationData.nextContent.lectureId}/contents/${navigationData.nextContent.contentId}`}
+      className="button next-lesson-btn"
+    >
+      Следующий урок
+      <ArrowRightIcon />
+    </Link>
   ) : null;
 
   if (!course) {
@@ -214,11 +274,25 @@ export function ShowContent() {
               {passStatistics}
 
               {course.lectures.map((lecture) => {
+                const lectureVisitedCount = lecture.content.filter(
+                  (c) => visitedContentIds.includes(c.id)
+                ).length;
+                const isCurrentLecture = Number(lectureId) === lecture.id;
                 return (
-                  <div className="mb-16 show-lecture-card" key={lecture.id}>
-                    <p className="fs-20 mb-0 show-lecture-title">
-                      {lecture.title}
-                    </p>
+                  <div
+                    className={`mb-16 show-lecture-card ${isCurrentLecture ? "show-lecture-card--active" : ""}`}
+                    key={lecture.id}
+                  >
+                    <div className="show-lecture-header">
+                      <p className="fs-20 mb-0 show-lecture-title">
+                        {lecture.title}
+                      </p>
+                      {isParticipating && (
+                        <span className="show-lecture-progress">
+                          {lectureVisitedCount}/{lecture.content.length}
+                        </span>
+                      )}
+                    </div>
 
                     {lecture.content.map((content) => {
                       const contentIcon =
@@ -346,6 +420,12 @@ export function ShowContent() {
                     </form>
                   )}
                 </div>
+
+                {nextLessonButton && (
+                  <div className="show-next-lesson">
+                    {nextLessonButton}
+                  </div>
+                )}
               </>
             )}
           </div>
