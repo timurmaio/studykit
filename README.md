@@ -22,13 +22,11 @@ An online platform designed specifically for universities, where each teacher ca
 ## Tech Stack
 
 - **Frontend**: React 19 + Vite + React Router
-- **API v2**: Hono (Node.js)
-- **Backend**: Ruby on Rails (legacy)
+- **API**: Hono (Node.js)
 - **Worker**: BullMQ + Redis
 - **Executor**: SQL sandbox for problem validation
 - **CMS**: Directus
 - **Database**: PostgreSQL
-- **Queue**: Redis + RabbitMQ
 
 ## Quick Start
 
@@ -44,11 +42,9 @@ Open http://localhost:5173
 ```
 apps/
 ├── frontend      # Student UI (React + Vite)
-├── api           # Modern REST API (Hono)
+├── api           # REST API (Hono)
 ├── worker        # Background job processor (BullMQ)
-├── executor      # SQL code validator
-├── backend       # Legacy Rails API
-└── admin         # Admin panel (React)
+└── executor      # SQL code validator
 
 packages/
 └── db            # Shared Drizzle schema
@@ -58,20 +54,20 @@ packages/
 
 ```
 ┌─────────────┐     ┌─────────────┐
-│   Frontend  │────▶│  API v2     │
-│   (React)   │     │  (Hono)     │
+│   Frontend  │────▶│     API      │
+│   (React)   │     │    (Hono)    │
 └─────────────┘     └──────┬──────┘
-                           │
-        ┌──────────────────┼──────────────────┐
-        ▼                  ▼                  ▼
-  ┌──────────┐      ┌────────────┐     ┌──────────┐
-  │  Worker  │      │  Executor  │     │ Directus │
-  │ (BullMQ) │      │ (SQL eval) │     │   (CMS)  │
-  └──────────┘      └────────────┘     └──────────┘
+                            │
+         ┌──────────────────┼──────────────────┐
+         ▼                  ▼                  ▼
+   ┌──────────┐      ┌────────────┐     ┌──────────┐
+   │  Worker  │      │  Executor  │     │ Directus │
+   │ (BullMQ) │      │ (SQL eval) │     │   (CMS)  │
+   └──────────┘      └────────────┘     └──────────┘
 ```
 
 - **Frontend** serves the student interface
-- **API v2** handles authentication, courses, lectures, and solution submissions
+- **API** handles authentication, courses, lectures, and solution submissions
 - **Worker** processes SQL solution checks asynchronously via BullMQ
 - **Executor** safely executes student SQL code and validates results
 - **Directus** provides CMS capabilities for content management
