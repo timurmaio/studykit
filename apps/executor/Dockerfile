@@ -1,13 +1,15 @@
-FROM ruby:3.2-slim
+FROM oven/bun:1-alpine
 
-RUN apt-get update && apt-get install -y --no-install-recommends sqlite3 curl && rm -rf /var/lib/apt/lists/*
-RUN gem install webrick --no-document
+RUN apk add --no-cache sqlite curl
 
 WORKDIR /app
 
-COPY apps/executor/app.rb ./app.rb
+COPY apps/executor/package.json ./package.json
+RUN bun install
+
+COPY apps/executor/src ./src
 
 ENV EXECUTOR_HOST=0.0.0.0
 ENV EXECUTOR_PORT=3200
 
-CMD ["ruby", "app.rb"]
+CMD ["bun", "src/index.ts"]

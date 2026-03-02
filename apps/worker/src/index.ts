@@ -6,7 +6,7 @@ import { sqlProblems, sqlSolutions } from "@studykit/db/schema";
 
 const REDIS_URL = process.env.REDIS_URL;
 const DATABASE_URL = process.env.DATABASE_URL;
-const EXECUTOR_URL = process.env.EXECUTOR_URL || "http://executor_v2:3200";
+const EXECUTOR_URL = process.env.EXECUTOR_URL || "http://executor:3200";
 
 if (!REDIS_URL || !DATABASE_URL) {
   throw new Error("REDIS_URL and DATABASE_URL are required");

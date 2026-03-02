@@ -1,9 +1,10 @@
-FROM oven/bun:1.1.38
+FROM oven/bun:1
 
 WORKDIR /app
 
 COPY pnpm-workspace.yaml ./
 COPY package.json ./package.json
+COPY bun.lock ./bun.lock
 COPY apps/api/package.json ./apps/api/package.json
 COPY packages/db/package.json ./packages/db/package.json
 

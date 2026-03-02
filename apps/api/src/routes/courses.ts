@@ -30,7 +30,7 @@ function resolveUserAvatar(baseUrl: string, userId: number | null, avatar: strin
   return `${baseUrl}/uploads/user/avatar/${userId}/${avatar}`;
 }
 
-function formatRailsDatetime(value: Date | string | null | undefined) {
+function formatDatetime(value: Date | string | null | undefined) {
   if (!value) return null;
   const iso = (value instanceof Date ? value : new Date(value)).toISOString();
   return iso.replace("T", " ").replace(".000Z", "");
@@ -260,7 +260,7 @@ courseRoutes.get("/:id", authMiddleware, async (c) => {
     title: course.title,
     description: course.description,
     avatar: resolveCourseAvatar(new URL(c.req.url).origin, course.id, course.avatar),
-    createdAt: formatRailsDatetime(course.createdAt),
+      createdAt: formatDatetime(course.createdAt),
     owner: {
       id: course.ownerId,
       firstName: course.ownerFirstName,
