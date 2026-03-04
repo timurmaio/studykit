@@ -22,6 +22,7 @@ export function NewCourse() {
     initial_code: "SELECT 1;",
     solution_code: "SELECT 1;",
   });
+  const [fieldErrors, setFieldErrors] = useState<{ lecture_id?: string; title?: string }>({});
 
   useEffect(() => {
     if (!id) return;
@@ -34,14 +35,15 @@ export function NewCourse() {
     e.preventDefault();
     const courseId = id;
     const lectureId = Number(state.lecture_id);
+    const newErrors: { lecture_id?: string; title?: string } = {};
     if (!courseId || !lectureId) {
-      setError("Выберите раздел лекции");
-      return;
+      newErrors.lecture_id = "Выберите раздел лекции";
     }
     if (!state.title.trim()) {
-      setError("Укажите название");
-      return;
+      newErrors.title = "Укажите название";
     }
+    setFieldErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) return;
 
     setIsSubmitting(true);
     setError("");
@@ -71,6 +73,9 @@ export function NewCourse() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setState((s) => ({ ...s, [name]: value }));
+    if (fieldErrors[name as keyof typeof fieldErrors]) {
+      setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
+    }
   };
 
   if (!course && !error) {
@@ -101,26 +106,43 @@ export function NewCourse() {
             name="lecture_id"
             value={state.lecture_id}
             onChange={handleChange}
-            className={inputClass}
+            className={`${inputClass}${fieldErrors.lecture_id ? " input--error" : ""}`}
             required
+            aria-describedby={fieldErrors.lecture_id ? "newcourse-lecture-error" : undefined}
+            aria-invalid={!!fieldErrors.lecture_id}
           >
             <option value="">Выберите раздел</option>
             {lectures.map((l) => (
               <option key={l.id} value={l.id}>{l.title}</option>
             ))}
           </select>
+          {fieldErrors.lecture_id ? (
+            <p id="newcourse-lecture-error" className="form-field-error mt-1" role="alert">
+              {fieldErrors.lecture_id}
+            </p>
+          ) : null}
         </div>
 
-        <TextField name="title" className="form-group mb-4">
+        <TextField name="title" className="form-group mb-4" >
           <Label className="auth-form_label block mb-1">Название</Label>
           <Input
             type="text"
             name="title"
             value={state.title}
-            className={inputClass}
+            className={`${inputClass}${fieldErrors.title ? " input--error" : ""}`}
             placeholder="Название лекции или задания"
             onChange={handleChange}
+            onBlur={(e) => {
+              const v = (e.target as HTMLInputElement).value;
+              setFieldErrors((prev) => ({ ...prev, title: !v.trim() ? "Укажите название" : undefined }));
+            }}
+            aria-describedby={fieldErrors.title ? "newcourse-title-error" : undefined}
           />
+          {fieldErrors.title ? (
+            <p id="newcourse-title-error" className="form-field-error mt-1" role="alert">
+              {fieldErrors.title}
+            </p>
+          ) : null}
         </TextField>
 
         <div className="form-group mb-4">

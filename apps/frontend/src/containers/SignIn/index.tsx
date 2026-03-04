@@ -2,6 +2,7 @@ import { SyntheticEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { apiPost } from "../../config";
 import { SignInForm } from "../../components/SignInForm";
+import { validateEmail, validatePassword } from "../../utils/validation";
 
 interface LoginResponse {
   id: number;
@@ -20,30 +21,44 @@ export function SignIn() {
     error: "",
     isLoading: false,
   });
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
 
   const handleChange = (event: SyntheticEvent) => {
     const target = event.target as HTMLInputElement;
     const name = target.name;
     const value = target.value;
 
-    setState({
-      ...state,
-      [name]: value,
-    });
+    setState((s) => ({ ...s, [name]: value }));
+    if (fieldErrors[name as keyof typeof fieldErrors]) {
+      setFieldErrors((e) => ({ ...e, [name]: undefined }));
+    }
+  };
+
+  const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    if (name === "email") {
+      setFieldErrors((e) => ({ ...e, email: validateEmail(value) ?? undefined }));
+    } else if (name === "password") {
+      setFieldErrors((e) => ({ ...e, password: validatePassword(value) ?? undefined }));
+    }
   };
 
   const handleSubmit = async (event: SyntheticEvent) => {
     event.preventDefault();
 
-    const signInData = {
-      user: {
-        email: state.email,
-        password: state.password,
-      },
-    };
+    const emailErr = validateEmail(state.email);
+    const passwordErr = validatePassword(state.password);
+    setFieldErrors({
+      email: emailErr ?? undefined,
+      password: passwordErr ?? undefined,
+    });
+    if (emailErr || passwordErr) return;
 
     setState((s) => ({ ...s, isLoading: true, error: "" }));
     try {
+      const signInData = {
+        user: { email: state.email, password: state.password },
+      };
       await apiPost<LoginResponse>("/api/users/login", signInData);
       window.dispatchEvent(new CustomEvent("auth:signin"));
       navigate("/courses");
@@ -72,8 +87,10 @@ export function SignIn() {
         <div className="auth-form-wrap">
           <SignInForm
             error={state.error}
+            fieldErrors={fieldErrors}
             isLoading={state.isLoading}
             handleChange={handleChange}
+            handleBlur={handleBlur}
             handleSubmit={handleSubmit}
           />
         </div>

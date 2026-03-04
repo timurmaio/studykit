@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { apiPost } from "../../config";
 import { SignUpForm } from "../../components/SignUpForm";
+import { validateEmail, validatePassword, validateRequired } from "../../utils/validation";
 
 interface UserResponse {
   id: number;
@@ -12,6 +13,8 @@ interface UserResponse {
   avatar?: string;
   role: number;
 }
+
+type SignUpFieldErrors = { firstName?: string; lastName?: string; email?: string; password?: string };
 
 export function SignUp() {
   const navigate = useNavigate();
@@ -24,20 +27,46 @@ export function SignUp() {
     error: "",
     isLoading: false,
   });
+  const [fieldErrors, setFieldErrors] = useState<SignUpFieldErrors>({});
 
   const handleChange = (event: SyntheticEvent) => {
     const target = event.target as HTMLInputElement;
     const name = target.name;
     const value = target.value;
 
-    setState({
-      ...state,
-      [name]: value,
-    });
+    setState((s) => ({ ...s, [name]: value }));
+    if (fieldErrors[name as keyof SignUpFieldErrors]) {
+      setFieldErrors((e) => ({ ...e, [name]: undefined }));
+    }
+  };
+
+  const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    if (name === "firstName") {
+      setFieldErrors((e) => ({ ...e, firstName: validateRequired(value, "имя") ?? undefined }));
+    } else if (name === "lastName") {
+      setFieldErrors((e) => ({ ...e, lastName: validateRequired(value, "фамилию") ?? undefined }));
+    } else if (name === "email") {
+      setFieldErrors((e) => ({ ...e, email: validateEmail(value) ?? undefined }));
+    } else if (name === "password") {
+      setFieldErrors((e) => ({ ...e, password: validatePassword(value) ?? undefined }));
+    }
   };
 
   const handleSubmit = async (event: SyntheticEvent) => {
     event.preventDefault();
+
+    const firstNameErr = validateRequired(state.firstName, "имя");
+    const lastNameErr = validateRequired(state.lastName, "фамилию");
+    const emailErr = validateEmail(state.email);
+    const passwordErr = validatePassword(state.password);
+    setFieldErrors({
+      firstName: firstNameErr ?? undefined,
+      lastName: lastNameErr ?? undefined,
+      email: emailErr ?? undefined,
+      password: passwordErr ?? undefined,
+    });
+    if (firstNameErr || lastNameErr || emailErr || passwordErr) return;
 
     const signUpData = {
       user: {
@@ -79,9 +108,11 @@ export function SignUp() {
         <div className="auth-form-wrap">
           <SignUpForm
             error={state.error}
+            fieldErrors={fieldErrors}
             isLoading={state.isLoading}
             changeFormType={() => navigate("/signin")}
             handleChange={handleChange}
+            handleBlur={handleBlur}
             handleSubmit={handleSubmit}
           />
         </div>
