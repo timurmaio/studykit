@@ -1,3 +1,11 @@
+interface SqlProblemFormHint {
+  sqlHint: string;
+  isOpen: boolean;
+  isCopied: boolean;
+  onToggle: () => void;
+  onCopy: () => void;
+}
+
 interface SqlProblemFormProps {
   solution: string;
   onSolutionChange: (value: string) => void;
@@ -6,11 +14,7 @@ interface SqlProblemFormProps {
   checkingInformation: string;
   succeed: boolean | null;
   isChecking?: boolean;
-  sqlHint?: string;
-  isHintOpen: boolean;
-  onHintToggle: () => void;
-  isHintCopied: boolean;
-  onCopyHint: () => void;
+  hint?: SqlProblemFormHint;
 }
 
 export function SqlProblemForm({
@@ -21,39 +25,27 @@ export function SqlProblemForm({
   checkingInformation,
   succeed,
   isChecking = false,
-  sqlHint,
-  isHintOpen,
-  onHintToggle,
-  isHintCopied,
-  onCopyHint,
+  hint,
 }: SqlProblemFormProps) {
   return (
     <form className="show-sql-form" onSubmit={onCheck}>
       <label htmlFor="solutionTextarea" className="show-sql-label">
         Введите сюда свое решение
       </label>
-      {sqlHint ? (
+      {hint ? (
         <div className="show-sql-hint-wrap">
-          <button
-            type="button"
-            className="show-sql-hint-toggle"
-            onClick={onHintToggle}
-          >
-            {isHintOpen ? "Скрыть подсказку" : "Показать подсказку"}
+          <button type="button" className="show-sql-hint-toggle" onClick={hint.onToggle}>
+            {hint.isOpen ? "Скрыть подсказку" : "Показать подсказку"}
           </button>
-          {isHintOpen ? (
+          {hint.isOpen ? (
             <div className="show-sql-hint-popover">
               <div className="show-sql-hint-header">
                 <span>Правильный SQL</span>
-                <button
-                  type="button"
-                  className="show-sql-copy"
-                  onClick={onCopyHint}
-                >
-                  {isHintCopied ? "Скопировано" : "Скопировать"}
+                <button type="button" className="show-sql-copy" onClick={hint.onCopy}>
+                  {hint.isCopied ? "Скопировано" : "Скопировать"}
                 </button>
               </div>
-              <pre className="show-sql-hint-code">{sqlHint}</pre>
+              <pre className="show-sql-hint-code">{hint.sqlHint}</pre>
             </div>
           ) : null}
         </div>
