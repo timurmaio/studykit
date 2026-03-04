@@ -48,14 +48,60 @@ StudyKit is a learning management system designed for academic institutions. It 
 
 ---
 
-## Quick Start
+## Local Deployment
+
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
+
+### Step-by-step
+
+**1. Clone and enter the project**
+
+```bash
+git clone https://github.com/timurmaio/studykit.git
+cd studykit
+```
+
+**2. Configure environment**
 
 ```bash
 cp .env.example .env
-docker compose up -d
 ```
 
-Open http://localhost:5173
+Defaults in `.env` work for local development. For production, change `JWT_SECRET`, `DIRECTUS_KEY`, `DIRECTUS_SECRET`, and `DIRECTUS_ADMIN_PASSWORD`.
+
+**3. First run only: initialize the database**
+
+```bash
+docker compose up -d db redis
+# wait until PostgreSQL is ready (5–10 seconds)
+docker compose run db-init
+```
+
+**4. Start all services**
+
+```bash
+docker compose up db redis api worker executor frontend directus
+```
+
+**5. Open the app**
+
+| URL | Purpose |
+|-----|---------|
+| http://localhost:5173 | Frontend (student UI) |
+| http://localhost:8055 | Directus (content management) |
+
+---
+
+### Optional: minimal stack
+
+To run only API, worker, Redis and DB (no frontend, no Directus):
+
+```bash
+docker compose up api worker redis db
+```
 
 ---
 
