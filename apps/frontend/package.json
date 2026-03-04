@@ -11,7 +11,10 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "fmt": "prettier --write '**/*.{js,jsx,json,ts,tsx,css,html}'"
+    "fmt": "prettier --write '**/*.{js,jsx,json,ts,tsx,css,html}'",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:ui": "vitest --ui"
   },
   "dependencies": {
     "framer-motion": "^11.18.2",
@@ -21,19 +24,27 @@
     "react-markdown": "10.1.0",
     "react-router": "7.13.0",
     "react-router-dom": "7.13.0",
+    "recharts": "^2.15.4",
     "sonner": "^1.7.4",
     "web-vitals": "5.1.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.1",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "22.19.11",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
     "@vitejs/plugin-react": "^5.1.4",
+    "@vitest/ui": "^4.0.18",
+    "jsdom": "^28.1.0",
     "prettier": "3.8.1",
     "tailwindcss": "^4.2.1",
     "typescript": "^5.6.3",
-    "vite": "^7.3.1"
+    "vite": "^7.3.1",
+    "vitest": "^4.0.18"
   },
   "browserslist": {
     "production": [

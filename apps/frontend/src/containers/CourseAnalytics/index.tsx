@@ -1,5 +1,18 @@
-import { useEffect, useState } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
 import { apiGet } from "../../config";
 
 interface AnalyticsSummary {
@@ -28,36 +41,7 @@ interface AnalyticsResponse {
   };
 }
 
-const ArrowLeftIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="19" y1="12" x2="5" y2="12" />
-    <polyline points="12 19 5 12 12 5" />
-  </svg>
-);
-
-const ChartIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="20" x2="18" y2="10" />
-    <line x1="12" y1="20" x2="12" y2="4" />
-    <line x1="6" y1="20" x2="6" y2="14" />
-  </svg>
-);
-
-const UsersIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-  </svg>
-);
-
-const BookIcon = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-  </svg>
-);
+import { ArrowLeftIcon, ChartIcon, UsersIcon, BookIcon } from "../../components/icons";
 
 function formatName(p: AnalyticsParticipant): string {
   const first = p.firstName?.trim() || "";
@@ -65,6 +49,20 @@ function formatName(p: AnalyticsParticipant): string {
   if (first || last) return [first, last].filter(Boolean).join(" ");
   return p.email ?? `Участник #${p.userId}`;
 }
+
+const PROGRESS_BUCKETS = [
+  { name: "0–25%", min: 0, max: 25 },
+  { name: "25–50%", min: 25, max: 50 },
+  { name: "50–75%", min: 50, max: 75 },
+  { name: "75–100%", min: 75, max: 101 },
+];
+
+const CHART_COLORS = [
+  "var(--color-danger)",
+  "var(--color-warning)",
+  "var(--color-accent-2)",
+  "var(--color-success)",
+];
 
 export function CourseAnalytics() {
   const { id } = useParams();
@@ -103,6 +101,26 @@ export function CourseAnalytics() {
   }
 
   const { courseTitle, summary, participants } = data;
+
+  const progressDistribution = useMemo(() => {
+    return PROGRESS_BUCKETS.map((bucket) => ({
+      name: bucket.name,
+      value: participants.filter(
+        (p) => p.progressPercent >= bucket.min && p.progressPercent < bucket.max
+      ).length,
+    }));
+  }, [participants]);
+
+  const topBySolved = useMemo(() => {
+    return [...participants]
+      .sort((a, b) => b.solvedProblems - a.solvedProblems)
+      .slice(0, 10)
+      .map((p) => ({
+        name: formatName(p).slice(0, 20) + (formatName(p).length > 20 ? "…" : ""),
+        solved: p.solvedProblems,
+        progress: p.progressPercent,
+      }));
+  }, [participants]);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 analytics-page">
@@ -145,6 +163,88 @@ export function CourseAnalytics() {
           <p className="text-2xl font-semibold">{summary.totalProblems}</p>
         </div>
       </div>
+
+      {/* Charts */}
+      {participants.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="panel p-4">
+            <h3 className="text-lg font-semibold mb-4">Распределение по прогрессу</h3>
+            <div className="analytics-chart">
+              <ResponsiveContainer width="100%" height={260}>
+                <PieChart>
+                  <Pie
+                    data={progressDistribution}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={90}
+                    paddingAngle={2}
+                    dataKey="value"
+                    nameKey="name"
+                    label={({ name, value }: { name: string; value: number }) =>
+                      value > 0 ? `${name}: ${value}` : null
+                    }
+                  >
+                    {progressDistribution.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number) => [value, "участников"]}
+                    contentStyle={{
+                      backgroundColor: "var(--color-surface)",
+                      border: "1px solid var(--color-border)",
+                      borderRadius: "8px",
+                    }}
+                    labelStyle={{ color: "var(--color-text)" }}
+                  />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div className="panel p-4">
+            <h3 className="text-lg font-semibold mb-4">Топ по решённым задачам</h3>
+            <div className="analytics-chart">
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart
+                  data={topBySolved}
+                  layout="vertical"
+                  margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="var(--color-border)"
+                  />
+                  <XAxis type="number" stroke="var(--color-text-muted)" />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={100}
+                    stroke="var(--color-text-muted)"
+                    tick={{ fontSize: 12 }}
+                  />
+                  <Tooltip
+                    formatter={(value: number) => [`${value} задач`, "решено"]}
+                    contentStyle={{
+                      backgroundColor: "var(--color-surface)",
+                      border: "1px solid var(--color-border)",
+                      borderRadius: "8px",
+                    }}
+                    labelStyle={{ color: "var(--color-text)" }}
+                  />
+                  <Bar
+                    dataKey="solved"
+                    fill="var(--color-accent)"
+                    radius={[0, 4, 4, 0]}
+                    maxBarSize={28}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Participants table */}
       <div className="panel overflow-hidden">

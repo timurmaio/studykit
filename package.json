@@ -4,7 +4,8 @@
   "scripts": {
     "install:frontend": "pnpm --dir apps/frontend install",
     "build:frontend": "pnpm --dir apps/frontend build",
-    "dev:frontend": "pnpm --dir apps/frontend dev"
+    "dev:frontend": "pnpm --dir apps/frontend dev",
+    "test": "pnpm --filter studykit-frontend test:run && pnpm --filter @studykit/api test"
   },
   "devDependencies": {
     "drizzle-orm": "^0.44.5"
