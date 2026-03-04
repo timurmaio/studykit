@@ -41,3 +41,7 @@ Lectures:
 SQL Solutions:
 - `POST /api/sql-solutions`
 - `GET /api/sql-solutions/:id/stream`
+
+## Endpoint reference (REST)
+
+All routes use kebab-case. Query params: `?owner=` for courses by owner, `?enrolled=` for courses user is enrolled in.

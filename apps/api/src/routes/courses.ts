@@ -79,8 +79,8 @@ courseRoutes.get("/", async (c) => {
     : participatedBy
       ? await base
           .leftJoin(groups, eq(groups.courseId, courses.id))
-      .leftJoin(userGroups, eq(userGroups.groupId, groups.id))
-      .where(eq(userGroups.userId, participatedBy))
+          .leftJoin(userGroups, eq(userGroups.groupId, groups.id))
+          .where(eq(userGroups.userId, participatedBy))
       : await base;
 
   return c.json(
