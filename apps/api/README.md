@@ -1,26 +1,43 @@
-# API v2 (Bun + Hono)
+# API (Bun + Hono)
 
 ## Start with Docker Compose
 
 ```bash
-docker compose up api_v2 worker_v2 redis db
+docker compose up api worker redis db
 ```
 
-API will be available at `http://localhost:3100/api/v2`.
+API will be available at `http://localhost:3100/api`.
 
 ## Key endpoints
 
 - `GET /health`
 - `GET /ready`
-- `POST /api/v2/auth/login`
-- `POST /api/v2/auth/refresh`
-- `POST /api/v2/auth/logout`
-- `GET /api/v2/users/me`
-- `GET /api/v2/courses`
-- `GET /api/v2/courses/:id`
-- `POST /api/v2/courses/:id/join`
-- `DELETE /api/v2/courses/:id/leave`
-- `GET /api/v2/courses/:id/participating`
-- `GET /api/v2/courses/:id/participants/:userId/statistics`
-- `POST /api/v2/sql-solutions`
-- `GET /api/v2/sql-solutions/:id`
+
+Users:
+- `POST /api/users` (signup)
+- `POST /api/users/login`
+- `POST /api/users/logout`
+- `GET /api/users/me`
+- `GET /api/users/:id`
+- `PUT /api/users/:id`
+- `GET /api/users/:id/courses`
+
+Courses:
+- `GET /api/courses` (`?owner=` `?enrolled=`)
+- `POST /api/courses`
+- `GET /api/courses/:id`
+- `POST /api/courses/:id/contents`
+- `POST /api/courses/:id/lectures`
+- `GET /api/courses/:id/enrollment`
+- `POST /api/courses/:id/enrollments`
+- `DELETE /api/courses/:id/enrollments`
+- `GET /api/courses/:id/progress`
+- `POST /api/courses/:id/progress`
+- `GET /api/courses/:id/analytics`
+
+Lectures:
+- `GET /api/lectures/:lectureId/contents/:contentId`
+
+SQL Solutions:
+- `POST /api/sql-solutions`
+- `GET /api/sql-solutions/:id/stream`

@@ -128,4 +128,4 @@ worker.on("failed", (job, error) => {
   console.error("Job failed", job?.id, error);
 });
 
-console.log("Worker v2 started");
+console.log("Worker started");

@@ -7,10 +7,11 @@ interface Props {
   handleChange: (event: SyntheticEvent) => void;
   changeFormType: () => void;
   error: string;
+  isLoading?: boolean;
 }
 
 export function SignUpForm(props: Props) {
-  const { handleSubmit, handleChange, changeFormType, error } = props;
+  const { handleSubmit, handleChange, changeFormType, error, isLoading = false } = props;
 
   return (
     <form id="signup-form" className="auth-form" onSubmit={handleSubmit}>
@@ -68,8 +69,9 @@ export function SignUpForm(props: Props) {
         type="submit"
         id="signup-form-submit"
         className="button auth-form_submit mb-4"
+        isDisabled={isLoading}
       >
-        Зарегистрироваться
+        {isLoading ? "Регистрация..." : "Зарегистрироваться"}
       </Button>
 
       <p className="auth-form_footer">

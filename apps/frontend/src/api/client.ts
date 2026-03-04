@@ -75,7 +75,7 @@ export function apiSqlSolutionStream(
   solutionId: number,
   onResult: (result: SqlSolutionStreamResult) => void
 ): () => void {
-  const url = `${API_URL}/api/sql_solutions/${solutionId}/stream`;
+  const url = `${API_URL}/api/sql-solutions/${solutionId}/stream`;
   const controller = new AbortController();
 
   fetch(url, {

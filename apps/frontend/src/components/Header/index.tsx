@@ -14,6 +14,21 @@ interface Props {
   isSigned: boolean;
   onSignOut: () => void;
 }
+const HamburgerIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
 export function Header(props: Props) {
   const { user, isSigned, onSignOut } = props;
   const { firstName, lastName } = user;
@@ -21,6 +36,7 @@ export function Header(props: Props) {
   const [themePreference, setThemePreference] = useState<ThemePreference>(
     "system"
   );
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const storedPreference = localStorage.getItem("theme");
@@ -32,6 +48,15 @@ export function Header(props: Props) {
         : "system"
     );
   }, []);
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsMenuOpen(false);
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [isMenuOpen]);
 
   const handleSignOut = () => {
     onSignOut();
@@ -62,10 +87,15 @@ export function Header(props: Props) {
     applyTheme(preference);
   };
 
+  const closeMenu = () => setIsMenuOpen(false);
+
   const signButton = isSigned ? (
     <button
       type="button"
-      onClick={handleSignOut}
+      onClick={() => {
+        closeMenu();
+        handleSignOut();
+      }}
       className="button button--ghost header-action"
     >
       Выйти
@@ -73,7 +103,10 @@ export function Header(props: Props) {
   ) : (
     <button
       type="button"
-      onClick={handleSignIn}
+      onClick={() => {
+        closeMenu();
+        handleSignIn();
+      }}
       className="button header-action"
     >
       Войти
@@ -84,6 +117,7 @@ export function Header(props: Props) {
     <Link
       to="/profile"
       className="link link--profile header-profile-link flex align-items-center"
+      onClick={closeMenu}
     >
       <img src={person} width="12px" className="mr-4" alt="" />
       <span className="mr-4">Профиль</span>
@@ -96,6 +130,7 @@ export function Header(props: Props) {
       className={({ isActive }: { isActive: boolean }) =>
         isActive ? "nav-link nav-link--active" : "nav-link mr-1"
       }
+      onClick={closeMenu}
     >
       Обучение
     </NavLink>
@@ -108,6 +143,7 @@ export function Header(props: Props) {
         className={({ isActive }: { isActive: boolean }) =>
           isActive ? "nav-link nav-link--active" : "nav-link mr-1"
         }
+        onClick={closeMenu}
       >
         Преподавание
       </NavLink>
@@ -119,61 +155,111 @@ export function Header(props: Props) {
     </span>
   ) : null;
 
+  const navLinks = (
+    <>
+      {linkToLearning}
+      {linkToTeaching}
+      <NavLink
+        to="/courses"
+        className={({ isActive }: { isActive: boolean }) =>
+          isActive ? "nav-link nav-link--active" : "nav-link"
+        }
+        onClick={closeMenu}
+      >
+        Все курсы
+      </NavLink>
+    </>
+  );
+
+  const themeToggle = (
+    <div className="theme-toggle" role="group" aria-label="Выбор темы">
+      <button
+        type="button"
+        className={`theme-toggle-btn${themePreference === "light" ? " theme-toggle-btn--active" : ""}`}
+        onClick={() => handleThemeSelect("light")}
+        title="Светлая"
+        aria-pressed={themePreference === "light"}
+      >
+        ☀
+      </button>
+      <button
+        type="button"
+        className={`theme-toggle-btn${themePreference === "system" ? " theme-toggle-btn--active" : ""}`}
+        onClick={() => handleThemeSelect("system")}
+        title="Системная"
+        aria-pressed={themePreference === "system"}
+      >
+        ◑
+      </button>
+      <button
+        type="button"
+        className={`theme-toggle-btn${themePreference === "dark" ? " theme-toggle-btn--active" : ""}`}
+        onClick={() => handleThemeSelect("dark")}
+        title="Тёмная"
+        aria-pressed={themePreference === "dark"}
+      >
+        ☽
+      </button>
+    </div>
+  );
+
   return (
-    <header className="top-panel mb-5">
+    <header className={`top-panel mb-5${isMenuOpen ? " top-panel--menu-open" : ""}`}>
       <div className="mx-auto max-w-6xl px-4">
         <div className="top-panel_content">
-          <nav className="top-panel_nav">
-            {linkToLearning}
-            {linkToTeaching}
-            <NavLink
-              to="/courses"
-              className={({ isActive }: { isActive: boolean }) =>
-                isActive ? "nav-link nav-link--active" : "nav-link"
-              }
-            >
-              Все курсы
-            </NavLink>
+          <button
+            type="button"
+            className="top-panel_menu-btn"
+            onClick={() => setIsMenuOpen(true)}
+            aria-label="Открыть меню"
+            aria-expanded={isMenuOpen}
+          >
+            <HamburgerIcon />
+          </button>
+
+          <nav className="top-panel_nav top-panel_desktop-nav">
+            {navLinks}
           </nav>
 
           <span className="top-panel_logo">StudyKit</span>
 
-          <div className="top-panel_profile">
+          <div className="top-panel_profile top-panel_desktop-profile">
             {linkToProfile}
             {userName}
-            <div className="theme-toggle" role="group" aria-label="Выбор темы">
-              <button
-                type="button"
-                className={`theme-toggle-btn${themePreference === "light" ? " theme-toggle-btn--active" : ""}`}
-                onClick={() => handleThemeSelect("light")}
-                title="Светлая"
-                aria-pressed={themePreference === "light"}
-              >
-                ☀
-              </button>
-              <button
-                type="button"
-                className={`theme-toggle-btn${themePreference === "system" ? " theme-toggle-btn--active" : ""}`}
-                onClick={() => handleThemeSelect("system")}
-                title="Системная"
-                aria-pressed={themePreference === "system"}
-              >
-                ◑
-              </button>
-              <button
-                type="button"
-                className={`theme-toggle-btn${themePreference === "dark" ? " theme-toggle-btn--active" : ""}`}
-                onClick={() => handleThemeSelect("dark")}
-                title="Тёмная"
-                aria-pressed={themePreference === "dark"}
-              >
-                ☽
-              </button>
-            </div>
+            {themeToggle}
             {signButton}
           </div>
         </div>
       </div>
+
+      {isMenuOpen && (
+        <>
+          <div
+            className="top-panel_overlay"
+            onClick={closeMenu}
+            role="button"
+            tabIndex={-1}
+            aria-label="Закрыть меню"
+          />
+          <div className="top-panel_drawer" role="dialog" aria-label="Меню навигации">
+            <button
+              type="button"
+              className="top-panel_drawer-close"
+              onClick={closeMenu}
+              aria-label="Закрыть меню"
+            >
+              <CloseIcon />
+            </button>
+            <nav className="top-panel_drawer-nav">{navLinks}</nav>
+            <div className="top-panel_drawer-profile">
+              {linkToProfile}
+              {userName}
+              {themeToggle}
+              {signButton}
+            </div>
+          </div>
+        </>
+      )}
     </header>
   );
 }

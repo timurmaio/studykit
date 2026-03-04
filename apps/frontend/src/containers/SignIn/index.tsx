@@ -18,6 +18,7 @@ export function SignIn() {
     email: "",
     password: "",
     error: "",
+    isLoading: false,
   });
 
   const handleChange = (event: SyntheticEvent) => {
@@ -41,16 +42,18 @@ export function SignIn() {
       },
     };
 
+    setState((s) => ({ ...s, isLoading: true, error: "" }));
     try {
       await apiPost<LoginResponse>("/api/users/login", signInData);
       window.dispatchEvent(new CustomEvent("auth:signin"));
       navigate("/courses");
     } catch (err: unknown) {
       const errors = (err as { errors?: string | string[] })?.errors;
-      setState({
-        ...state,
+      setState((s) => ({
+        ...s,
+        isLoading: false,
         error: Array.isArray(errors) ? errors.join(", ") : String(errors ?? "Ошибка входа"),
-      });
+      }));
     }
   };
 
@@ -69,6 +72,7 @@ export function SignIn() {
         <div className="auth-form-wrap">
           <SignInForm
             error={state.error}
+            isLoading={state.isLoading}
             handleChange={handleChange}
             handleSubmit={handleSubmit}
           />

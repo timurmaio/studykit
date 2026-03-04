@@ -40,11 +40,9 @@ function formatDatetime(value: Date | string | null | undefined) {
 
 const courseIdSchema = z.coerce.number().int().positive();
 
-const userIdSchema = z.coerce.number().int().positive();
-
 const listCoursesQuerySchema = z.object({
-  owned_by: z.coerce.number().int().positive().optional(),
-  participated_by: z.coerce.number().int().positive().optional(),
+  owner: z.coerce.number().int().positive().optional(),
+  enrolled: z.coerce.number().int().positive().optional(),
 });
 
 export const courseRoutes = new Hono();
@@ -55,8 +53,8 @@ courseRoutes.get("/", async (c) => {
     return c.json({ errors: ["Invalid query params"] }, 400);
   }
 
-  const ownerId = parsedQuery.data.owned_by;
-  const participatedBy = parsedQuery.data.participated_by;
+  const ownerId = parsedQuery.data.owner;
+  const participatedBy = parsedQuery.data.enrolled;
 
   const base = db
     .select({
@@ -81,8 +79,8 @@ courseRoutes.get("/", async (c) => {
     : participatedBy
       ? await base
           .leftJoin(groups, eq(groups.courseId, courses.id))
-          .leftJoin(userGroups, eq(userGroups.groupId, groups.id))
-          .where(eq(userGroups.userId, participatedBy))
+      .leftJoin(userGroups, eq(userGroups.groupId, groups.id))
+      .where(eq(userGroups.userId, participatedBy))
       : await base;
 
   return c.json(
@@ -164,7 +162,7 @@ const createContentSchema = z.object({
   }),
 });
 
-courseRoutes.post("/:id/content", authMiddleware, authorize("teacher", "admin"), async (c) => {
+courseRoutes.post("/:id/contents", authMiddleware, authorize("teacher", "admin"), async (c) => {
   const parsedId = courseIdSchema.safeParse(c.req.param("id"));
   if (!parsedId.success) {
     return c.json({ errors: ["Invalid course id"] }, 400);
@@ -503,7 +501,7 @@ courseRoutes.get("/:id", authMiddleware, async (c) => {
   });
 });
 
-courseRoutes.get("/:id/participating", authMiddleware, async (c) => {
+courseRoutes.get("/:id/enrollment", authMiddleware, async (c) => {
   const parsedId = courseIdSchema.safeParse(c.req.param("id"));
   if (!parsedId.success) {
     return c.json({ errors: ["Invalid course id"] }, 400);
@@ -521,7 +519,7 @@ courseRoutes.get("/:id/participating", authMiddleware, async (c) => {
   return c.json({ participating: Boolean(participation?.id) });
 });
 
-courseRoutes.post("/:id/join", authMiddleware, async (c) => {
+courseRoutes.post("/:id/enrollments", authMiddleware, async (c) => {
   const parsedId = courseIdSchema.safeParse(c.req.param("id"));
   if (!parsedId.success) {
     return c.json({ errors: ["Invalid course id"] }, 400);
@@ -547,7 +545,7 @@ courseRoutes.post("/:id/join", authMiddleware, async (c) => {
   return c.json({ data: "Вы успешно подписаны на курс" });
 });
 
-courseRoutes.delete("/:id/leave", authMiddleware, async (c) => {
+courseRoutes.delete("/:id/enrollments", authMiddleware, async (c) => {
   const parsedId = courseIdSchema.safeParse(c.req.param("id"));
   if (!parsedId.success) {
     return c.json({ errors: ["Invalid course id"] }, 400);
@@ -573,50 +571,176 @@ courseRoutes.delete("/:id/leave", authMiddleware, async (c) => {
   return c.json({ data: "Вы успешно отписаны от курса" });
 });
 
-courseRoutes.get("/:id/participants/:userId/statistics", authMiddleware, async (c) => {
-  const parsedCourseId = courseIdSchema.safeParse(c.req.param("id"));
-  const parsedUserId = userIdSchema.safeParse(c.req.param("userId"));
-  if (!parsedCourseId.success || !parsedUserId.success) {
-    return c.json({ errors: ["Invalid params"] }, 400);
+courseRoutes.get("/:id/analytics", authMiddleware, authorize("teacher", "admin"), async (c) => {
+  const parsedId = courseIdSchema.safeParse(c.req.param("id"));
+  if (!parsedId.success) {
+    return c.json({ errors: ["Invalid course id"] }, 400);
   }
 
   const auth = c.get("auth");
-  if (auth.userId !== parsedUserId.data) {
+  const [course] = await db
+    .select({ id: courses.id, ownerId: courses.ownerId, title: courses.title })
+    .from(courses)
+    .where(eq(courses.id, parsedId.data))
+    .limit(1);
+
+  if (!course) {
+    return c.json({ errors: ["Course not found"] }, 404);
+  }
+  if (course.ownerId !== auth.userId && auth.role !== "admin") {
     return c.json({ errors: ["Forbidden"] }, 403);
   }
 
-  const [course] = await db.select({ id: courses.id }).from(courses).where(eq(courses.id, parsedCourseId.data)).limit(1);
-  if (!course) {
-    return c.json({ errors: ["Невозможно найти указанный курс"] }, 404);
-  }
+  const contentIds = await db
+    .select({ id: lectureContents.id })
+    .from(lectureContents)
+    .innerJoin(lectures, eq(lectures.id, lectureContents.lectureId))
+    .where(eq(lectures.courseId, parsedId.data));
+  const contentIdList = contentIds.map((r) => r.id);
+  const totalContent = contentIdList.length;
 
   const problemRows = await db
     .select({ sqlProblemId: sqlProblemContents.sqlProblemId })
     .from(sqlProblemContents)
-    .leftJoin(
+    .innerJoin(
       lectureContents,
       and(eq(lectureContents.actableType, "SqlProblemContent"), eq(lectureContents.actableId, sqlProblemContents.id))
     )
-    .leftJoin(lectures, eq(lectures.id, lectureContents.lectureId))
-    .where(eq(lectures.courseId, parsedCourseId.data));
+    .innerJoin(lectures, eq(lectures.id, lectureContents.lectureId))
+    .where(eq(lectures.courseId, parsedId.data));
+  const problemIds = new Set(problemRows.map((r) => r.sqlProblemId).filter((id): id is number => Number.isFinite(id)));
+  const totalProblems = problemIds.size;
 
-  const problemIds = new Set(problemRows.map((row) => row.sqlProblemId).filter((id): id is number => Number.isFinite(id)));
+  const participantRows = await db
+    .select({
+      userId: userGroups.userId,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      email: users.email,
+    })
+    .from(groups)
+    .innerJoin(userGroups, eq(userGroups.groupId, groups.id))
+    .innerJoin(users, eq(users.id, userGroups.userId))
+    .where(eq(groups.courseId, parsedId.data));
 
-  const solvedRows = await db
-    .select({ sqlProblemId: sqlSolutions.sqlProblemId })
-    .from(sqlSolutions)
-    .where(and(eq(sqlSolutions.userId, auth.userId), eq(sqlSolutions.succeed, true)));
-
-  const solvedIds = new Set(solvedRows.map((row) => row.sqlProblemId).filter((id): id is number => Number.isFinite(id)));
-  let solvedProblems = 0;
-  for (const id of problemIds) {
-    if (solvedIds.has(id)) solvedProblems += 1;
+  if (participantRows.length === 0) {
+    return c.json({
+      data: {
+        courseTitle: course.title ?? "",
+        summary: {
+          totalParticipants: 0,
+          totalContent,
+          totalProblems,
+          avgProgressPercent: 0,
+          avgProblemsSolved: 0,
+        },
+        participants: [],
+      },
+    });
   }
+
+  const participantIds = participantRows.map((r) => r.userId).filter((id): id is number => Number.isFinite(id));
+
+  const courseTitle = course.title ?? "";
+
+  const progressRows = await db
+    .select({
+      userId: userLectureProgress.userId,
+      lectureContentId: userLectureProgress.lectureContentId,
+    })
+    .from(userLectureProgress)
+    .where(
+      and(
+        inArray(userLectureProgress.userId, participantIds),
+        contentIdList.length > 0 ? inArray(userLectureProgress.lectureContentId, contentIdList) : eq(userLectureProgress.id, 0)
+      )
+    );
+
+  const solvedRows =
+    problemIds.size > 0
+      ? await db
+          .select({
+            userId: sqlSolutions.userId,
+            sqlProblemId: sqlSolutions.sqlProblemId,
+          })
+          .from(sqlSolutions)
+          .where(
+            and(
+              inArray(sqlSolutions.userId, participantIds),
+              eq(sqlSolutions.succeed, true),
+              inArray(sqlSolutions.sqlProblemId, Array.from(problemIds))
+            )
+          )
+      : [];
+
+  const sqlProblemToContentId = await (async () => {
+    const problemIdList = Array.from(problemIds);
+    if (problemIdList.length === 0) return new Map<number, number>();
+    const mapping = await db
+      .select({
+        sqlProblemId: sqlProblemContents.sqlProblemId,
+        lectureContentId: lectureContents.id,
+      })
+      .from(sqlProblemContents)
+      .innerJoin(
+        lectureContents,
+        and(eq(lectureContents.actableType, "SqlProblemContent"), eq(lectureContents.actableId, sqlProblemContents.id))
+      )
+      .where(inArray(sqlProblemContents.sqlProblemId, problemIdList));
+    return new Map(mapping.map((r) => [r.sqlProblemId, r.lectureContentId]));
+  })();
+
+  const progressByUser = new Map<number, Set<number>>();
+  const solvedProblemsByUser = new Map<number, Set<number>>();
+  for (const pid of participantIds) {
+    progressByUser.set(pid, new Set());
+    solvedProblemsByUser.set(pid, new Set());
+  }
+  for (const row of progressRows) {
+    progressByUser.get(row.userId!)?.add(row.lectureContentId!);
+  }
+  for (const row of solvedRows) {
+    const contentId = sqlProblemToContentId.get(row.sqlProblemId!);
+    if (contentId) {
+      progressByUser.get(row.userId!)?.add(contentId);
+    }
+    solvedProblemsByUser.get(row.userId!)?.add(row.sqlProblemId!);
+  }
+
+  const participants = participantRows.map((row) => {
+    const userId = row.userId!;
+    const completedCount = progressByUser.get(userId)?.size ?? 0;
+    const progressPercent = totalContent > 0 ? Math.round((completedCount / totalContent) * 100) : 0;
+    const solvedProblems = solvedProblemsByUser.get(userId)?.size ?? 0;
+    return {
+      userId,
+      firstName: row.firstName,
+      lastName: row.lastName,
+      email: row.email,
+      progressPercent,
+      solvedProblems,
+      totalProblems,
+    };
+  });
+
+  const sumProgress = participants.reduce((s, p) => s + p.progressPercent, 0);
+  const sumSolved = participants.reduce((s, p) => s + p.solvedProblems, 0);
+  const avgProgressPercent =
+    participants.length > 0 ? Math.round(sumProgress / participants.length) : 0;
+  const avgProblemsSolved =
+    participants.length > 0 ? Math.round((sumSolved / participants.length) * 10) / 10 : 0;
 
   return c.json({
     data: {
-      solved_problems: solvedProblems,
-      problems: problemIds.size,
+      courseTitle,
+      summary: {
+        totalParticipants: participants.length,
+        totalContent,
+        totalProblems,
+        avgProgressPercent,
+        avgProblemsSolved,
+      },
+      participants,
     },
   });
 });

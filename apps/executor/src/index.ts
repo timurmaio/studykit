@@ -130,4 +130,4 @@ const server = Bun.serve({
   },
 });
 
-console.log(`Executor v2 (Bun) started on http://${HOST}:${PORT}`);
+console.log(`Executor (Bun) started on http://${HOST}:${PORT}`);

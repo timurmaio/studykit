@@ -20,6 +20,7 @@ import { NotFound } from "./components/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { TeacherRoute } from "./components/TeacherRoute";
 import { Teaching } from "./containers/Teaching";
+import { CourseAnalytics } from "./containers/CourseAnalytics";
 import { NewCourse } from "./components/NewCourse";
 import type { CourseItem } from "./types/Course";
 
@@ -47,7 +48,7 @@ export const learningLoader = async () => {
   try {
     const user = await apiGet<{ id: number }>("/api/users/me");
     const courses = await apiGet<CourseItem[]>(
-      `/api/courses?participated_by=${user.id}`
+      `/api/courses?enrolled=${user.id}`
     );
     return { courses };
   } catch {
@@ -89,7 +90,7 @@ export const courseLoader = async ({
     let participating = false;
     try {
       const data = await apiGet<{ participating: boolean }>(
-        `/api/courses/${params.id}/participating`
+        `/api/courses/${params.id}/enrollment`
       );
       participating = data.participating;
     } catch {
@@ -145,6 +146,14 @@ export const router = createBrowserRouter([
         element: (
           <TeacherRoute>
             <NewCourse />
+          </TeacherRoute>
+        ),
+      },
+      {
+        path: "courses/:id/analytics",
+        element: (
+          <TeacherRoute>
+            <CourseAnalytics />
           </TeacherRoute>
         ),
       },

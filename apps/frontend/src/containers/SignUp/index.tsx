@@ -1,5 +1,6 @@
 import { SyntheticEvent, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { apiPost } from "../../config";
 import { SignUpForm } from "../../components/SignUpForm";
 
@@ -21,6 +22,7 @@ export function SignUp() {
     email: "",
     password: "",
     error: "",
+    isLoading: false,
   });
 
   const handleChange = (event: SyntheticEvent) => {
@@ -46,16 +48,19 @@ export function SignUp() {
       },
     };
 
+    setState((s) => ({ ...s, isLoading: true, error: "" }));
     try {
       await apiPost<UserResponse>("/api/users", signUpData);
+      toast.success("Аккаунт создан");
       window.dispatchEvent(new CustomEvent("auth:signin"));
       navigate("/courses");
     } catch (err: unknown) {
       const errors = (err as { errors?: string | string[] })?.errors;
-      setState({
-        ...state,
+      setState((s) => ({
+        ...s,
+        isLoading: false,
         error: Array.isArray(errors) ? errors.join(", ") : String(errors ?? "Ошибка регистрации"),
-      });
+      }));
     }
   };
 
@@ -74,6 +79,7 @@ export function SignUp() {
         <div className="auth-form-wrap">
           <SignUpForm
             error={state.error}
+            isLoading={state.isLoading}
             changeFormType={() => navigate("/signin")}
             handleChange={handleChange}
             handleSubmit={handleSubmit}

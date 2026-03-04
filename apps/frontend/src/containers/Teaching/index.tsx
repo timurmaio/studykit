@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { useAuth } from "../../contexts/AuthContext";
 import { apiGet, apiPost } from "../../config";
 import type { CourseItem } from "../../types/Course";
@@ -19,7 +20,7 @@ export function Teaching() {
   const loadCourses = useCallback(() => {
     if (!user?.id) return;
     setIsLoading(true);
-    apiGet<CourseItem[]>(`/api/courses?owned_by=${user.id}`)
+    apiGet<CourseItem[]>(`/api/courses?owner=${user.id}`)
       .then(setCourses)
       .catch(() => setError("Не удалось загрузить курсы"))
       .finally(() => setIsLoading(false));
@@ -42,6 +43,7 @@ export function Teaching() {
       setCreateDescription("");
       setShowCreateForm(false);
       loadCourses();
+      toast.success("Курс создан");
       if (res?.id) {
         navigate(`/courses/${res.id}`);
       }
@@ -144,6 +146,9 @@ export function Teaching() {
               <div className="flex gap-2">
                 <Link to={`/courses/${course.id}`} className="button button--ghost">
                   Открыть
+                </Link>
+                <Link to={`/courses/${course.id}/analytics`} className="button button--ghost">
+                  Аналитика
                 </Link>
                 <Link
                   to={`/courses/${course.id}/teach`}

@@ -3,7 +3,6 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { env, corsOrigins } from "./env";
 import { bootstrap } from "./bootstrap";
-import { authRoutes } from "./routes/auth";
 import { userRoutes } from "./routes/users";
 import { courseRoutes } from "./routes/courses";
 import { sqlSolutionRoutes } from "./routes/sql-solutions";
@@ -27,16 +26,13 @@ app.use(
 app.get("/health", (c) => c.json({ status: "ok" }));
 app.get("/ready", async (c) => c.json({ status: "ready" }));
 
-const v2 = new Hono();
-v2.route("/auth", authRoutes);
-v2.route("/users", userRoutes);
-v2.route("/courses", courseRoutes);
-v2.route("/lectures", lectureRoutes);
-v2.route("/sql-solutions", sqlSolutionRoutes);
-v2.route("/sql_solutions", sqlSolutionRoutes);
+const api = new Hono();
+api.route("/users", userRoutes);
+api.route("/courses", courseRoutes);
+api.route("/lectures", lectureRoutes);
+api.route("/sql-solutions", sqlSolutionRoutes);
 
-app.route("/api/v2", v2);
-app.route("/api", v2);
+app.route("/api", api);
 
 app.notFound((c) => c.json({ errors: ["Not found"] }, 404));
 app.onError((error, c) => {
@@ -53,11 +49,11 @@ bootstrap()
         port: env.API_PORT,
       },
       (info) => {
-        console.log(`API v2 listening at http://${info.address}:${info.port}`);
+        console.log(`API listening at http://${info.address}:${info.port}`);
       }
     );
   })
   .catch((error) => {
-    console.error("Failed to bootstrap API v2", error);
+    console.error("Failed to bootstrap API", error);
     process.exit(1);
   });

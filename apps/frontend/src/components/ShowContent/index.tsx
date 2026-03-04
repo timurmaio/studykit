@@ -30,6 +30,7 @@ export function ShowContent() {
   const [alert, setAlert] = useState("");
   const [checkingInformation, setCheckingInformation] = useState("");
   const [succeed, setSucceed] = useState<boolean | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isHintOpen, setIsHintOpen] = useState(false);
   const [isHintCopied, setIsHintCopied] = useState(false);
@@ -76,7 +77,7 @@ export function ShowContent() {
     (async () => {
       try {
         const contentData = await apiGet<LectureContent>(
-          `/api/lectures/${lectureId}/content/${contentId}`
+          `/api/lectures/${lectureId}/contents/${contentId}`
         );
         setContent(contentData);
         setContentError("");
@@ -97,7 +98,7 @@ export function ShowContent() {
 
     apiGet<CourseItem>(`/api/courses/${id}`).then((data) => setCourse(data));
 
-    apiGet<{ participating: boolean }>(`/api/courses/${id}/participating`)
+    apiGet<{ participating: boolean }>(`/api/courses/${id}/enrollment`)
       .then((data) => setIsParticipating(data.participating))
       .catch(() => setIsParticipating(false));
 
@@ -135,12 +136,13 @@ export function ShowContent() {
     setAlert("");
     setCheckingInformation("");
     setSucceed(null);
+    setIsChecking(true);
     if (streamAbortRef.current) {
       streamAbortRef.current();
       streamAbortRef.current = null;
     }
 
-    apiPost<{ id: number }>("/api/sql_solutions", {
+    apiPost<{ id: number }>("/api/sql-solutions", {
       sql_solution: {
         sql_problem_id: content.sqlProblemId || content.id,
         code: solution,
@@ -152,6 +154,7 @@ export function ShowContent() {
 
         streamAbortRef.current = apiSqlSolutionStream(solutionId, (result) => {
           streamAbortRef.current = null;
+          setIsChecking(false);
           if (result.timeout) {
             setCheckingInformation("Проверка занимает длительное время, обновите страницу.");
             setSucceed(null);
@@ -165,6 +168,7 @@ export function ShowContent() {
         });
       })
       .catch((err: unknown) => {
+        setIsChecking(false);
         const errorText = (err as { errors?: string | string[] })?.errors;
         setAlert(
           Array.isArray(errorText) ? errorText[0] : String(errorText ?? "Ошибка")
@@ -329,7 +333,15 @@ export function ShowContent() {
         <div className="lg:col-span-8">
           <div className="panel show-content-panel">
             {isLoading ? (
-              <div className="mx-8 mt-6">Загружаем материал...</div>
+              <div className="show-content-skeleton mx-8 mt-6">
+                <div className="show-content-skeleton-title" />
+                <div className="show-content-skeleton-line" />
+                <div className="show-content-skeleton-line" style={{ width: "95%" }} />
+                <div className="show-content-skeleton-line" style={{ width: "88%" }} />
+                <div className="show-content-skeleton-line" style={{ width: "70%" }} />
+                <div className="show-content-skeleton-line" style={{ width: "92%" }} />
+                <div className="show-content-skeleton-line" style={{ width: "65%" }} />
+              </div>
             ) : (
               <>
                 <header className="ml-8 mt-6 text-2xl font-bold mb-5 show-content-title">
@@ -352,6 +364,7 @@ export function ShowContent() {
                       alert={alert}
                       checkingInformation={checkingInformation}
                       succeed={succeed}
+                      isChecking={isChecking}
                       sqlHint={sqlHint}
                       isHintOpen={isHintOpen}
                       onHintToggle={() => setIsHintOpen((prev) => !prev)}

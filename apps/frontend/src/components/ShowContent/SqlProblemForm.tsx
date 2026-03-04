@@ -5,6 +5,7 @@ interface SqlProblemFormProps {
   alert: string;
   checkingInformation: string;
   succeed: boolean | null;
+  isChecking?: boolean;
   sqlHint?: string;
   isHintOpen: boolean;
   onHintToggle: () => void;
@@ -19,6 +20,7 @@ export function SqlProblemForm({
   alert,
   checkingInformation,
   succeed,
+  isChecking = false,
   sqlHint,
   isHintOpen,
   onHintToggle,
@@ -64,8 +66,8 @@ export function SqlProblemForm({
         value={solution}
         onChange={(e) => onSolutionChange(e.target.value)}
       />
-      <button type="submit" className="button mb-4 show-sql-button">
-        Отправить решение
+      <button type="submit" className="button mb-4 show-sql-button" disabled={isChecking}>
+        {isChecking ? "Проверка..." : "Отправить решение"}
       </button>
       {alert ? (
         <div className="alert alert-danger">{alert}</div>

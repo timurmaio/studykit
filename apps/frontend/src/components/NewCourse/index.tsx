@@ -59,7 +59,7 @@ export function NewCourse() {
         (payload.course_content as Record<string, unknown>).initial_code = state.initial_code || "SELECT 1;";
         (payload.course_content as Record<string, unknown>).solution_code = state.solution_code || "SELECT 1;";
       }
-      await apiPost(`/api/courses/${courseId}/content`, payload);
+      await apiPost(`/api/courses/${courseId}/contents`, payload);
       navigate(`/courses/${courseId}`);
     } catch (err: unknown) {
       setError(String((err as { errors?: string })?.errors ?? "Ошибка при создании"));

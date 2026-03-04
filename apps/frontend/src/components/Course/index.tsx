@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, SyntheticEvent } from "react";
 import { Link, useParams, useRevalidator } from "react-router-dom";
+import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { useAuth } from "../../contexts/AuthContext";
 import { apiGet, apiPost, apiDelete } from "../../config";
@@ -154,9 +155,10 @@ export function Course() {
     if (!id || isJoining) return;
     setIsJoining(true);
     try {
-      await apiPost(`/api/courses/${id}/join`);
+      await apiPost(`/api/courses/${id}/enrollments`);
       setIsParticipating(true);
       setAlert("");
+      toast.success("Вы подписаны на курс");
     } catch (err: unknown) {
       const errors = (err as { errors?: string })?.errors;
       setAlert(String(errors ?? "Не удалось подписаться"));
@@ -169,9 +171,10 @@ export function Course() {
     if (!id || isJoining) return;
     setIsJoining(true);
     try {
-      await apiDelete(`/api/courses/${id}/leave`);
+      await apiDelete(`/api/courses/${id}/enrollments`);
       setIsParticipating(false);
       setAlert("");
+      toast.success("Вы отписаны от курса");
     } catch (err: unknown) {
       const errors = (err as { errors?: string })?.errors;
       setAlert(String(errors ?? "Не удалось отписаться"));
@@ -398,13 +401,22 @@ export function Course() {
 
             {ctaSection}
             {isOwner && (
-              <Link
-                to={`/courses/${id}/teach`}
-                className="button button--ghost course-hero__actions mt-3"
-                style={{ display: "inline-block" }}
-              >
-                Добавить контент
-              </Link>
+              <div className="course-hero__actions mt-3 flex gap-2 flex-wrap">
+                <Link
+                  to={`/courses/${id}/analytics`}
+                  className="button button--ghost"
+                  style={{ display: "inline-block" }}
+                >
+                  Аналитика
+                </Link>
+                <Link
+                  to={`/courses/${id}/teach`}
+                  className="button button--ghost"
+                  style={{ display: "inline-block" }}
+                >
+                  Добавить контент
+                </Link>
+              </div>
             )}
             {alert && <div className="alert alert-warning course-hero__alert">{alert}</div>}
           </div>

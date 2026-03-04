@@ -1,5 +1,5 @@
 {
-  "name": "@studykit/api-v2",
+  "name": "@studykit/api",
   "version": "0.0.1",
   "private": true,
   "type": "module",

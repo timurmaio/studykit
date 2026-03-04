@@ -172,7 +172,7 @@ CREATE TABLE IF NOT EXISTS wikidata_items_to_lecture_contents (
 CREATE INDEX IF NOT EXISTS idx_wikidata_to_content_item ON wikidata_items_to_lecture_contents(wikidata_item_id);
 CREATE INDEX IF NOT EXISTS idx_wikidata_to_content_content ON wikidata_items_to_lecture_contents(lecture_content_id);
 
--- Refresh tokens table (for API v2)
+-- Refresh tokens table (for API)
 CREATE TABLE IF NOT EXISTS refresh_tokens (
     id UUID PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE,

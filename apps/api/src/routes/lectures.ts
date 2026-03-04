@@ -12,9 +12,9 @@ import { authMiddleware } from "../middleware/auth";
 
 export const lectureRoutes = new Hono();
 
-lectureRoutes.get("/:lectureId/content/:id", authMiddleware, async (c) => {
+lectureRoutes.get("/:lectureId/contents/:contentId", authMiddleware, async (c) => {
   const lectureId = Number(c.req.param("lectureId"));
-  const contentId = Number(c.req.param("id"));
+  const contentId = Number(c.req.param("contentId"));
   if (!Number.isFinite(lectureId) || !Number.isFinite(contentId) || lectureId <= 0 || contentId <= 0) {
     return c.json({ errors: ["Invalid params"] }, 400);
   }

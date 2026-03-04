@@ -1,5 +1,5 @@
 {
-  "name": "@studykit/executor-v2",
+  "name": "@studykit/executor",
   "version": "0.0.1",
   "private": true,
   "type": "module",

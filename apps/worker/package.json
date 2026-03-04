@@ -1,5 +1,5 @@
 {
-  "name": "@studykit/worker-v2",
+  "name": "@studykit/worker",
   "version": "0.0.1",
   "private": true,
   "type": "module",

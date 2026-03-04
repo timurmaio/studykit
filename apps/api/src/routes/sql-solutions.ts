@@ -174,29 +174,3 @@ sqlSolutionRoutes.get("/:id/stream", authMiddleware, (c) => {
     stream.close();
   });
 });
-
-sqlSolutionRoutes.get("/:id", authMiddleware, async (c) => {
-  const id = Number(c.req.param("id"));
-  if (!Number.isFinite(id) || id <= 0) {
-    return c.json({ errors: ["Invalid solution id"] }, 400);
-  }
-
-  const auth = c.get("auth");
-  const [solution] = await db
-    .select({
-      id: sqlSolutions.id,
-      sqlProblemId: sqlSolutions.sqlProblemId,
-      userId: sqlSolutions.userId,
-      code: sqlSolutions.code,
-      succeed: sqlSolutions.succeed,
-    })
-    .from(sqlSolutions)
-    .where(and(eq(sqlSolutions.id, id), eq(sqlSolutions.userId, auth.userId)))
-    .limit(1);
-
-  if (!solution) {
-    return c.json({ errors: ["Not found"] }, 404);
-  }
-
-  return c.json(solution);
-});
