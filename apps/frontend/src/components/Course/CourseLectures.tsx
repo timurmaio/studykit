@@ -107,7 +107,7 @@ export function CourseLectures(props: CourseLecturesProps) {
                     key={content.id}
                     to={`/courses/${courseId}/lectures/${lecture.id}/contents/${content.id}`}
                     className={`link course-lesson ${isDone ? "course-lesson--done" : ""}`}
-                    onClick={(e) => onLessonClick(e, lecture.id, content.id, content.title)}
+                    onClick={(e) => onLessonClick(e, lecture.id, content.id, content.title ?? "")}
                   >
                     <div className="list-item course-lesson-row">
                       {isParticipating && (

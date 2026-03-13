@@ -142,7 +142,23 @@ apps/
 
 packages/
 └── db         # Shared Drizzle schema
+
+docs/
+├── ARCHITECTURE.md   # Technical architecture
+├── CONTRIBUTING.md   # Contribution guide
+└── VISION.md         # Roadmap
 ```
+
+---
+
+## Documentation
+
+| Doc | Description |
+|-----|-------------|
+| [ARCHITECTURE](./docs/ARCHITECTURE.md) | Services, data flow, auth |
+| [CONTRIBUTING](./docs/CONTRIBUTING.md) | Setup, dev, PR workflow |
+| [VISION](./docs/VISION.md) | Roadmap, future directions |
+| API docs | http://localhost:3100/docs (Swagger UI when API runs) |
 
 ---
 

@@ -1,5 +1,6 @@
 import { SyntheticEvent } from "react";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { TextField, Label, Input, Button } from "react-aria-components";
 
 interface Props {
@@ -12,23 +13,22 @@ interface Props {
 }
 
 export function SignInForm(props: Props) {
+  const { t } = useTranslation();
   const { handleSubmit, handleChange, handleBlur, error, fieldErrors, isLoading = false } = props;
   return (
     <form id="signin-form" className="auth-form" onSubmit={handleSubmit}>
-      <h1 className="auth-form_head mb-2">С возвращением</h1>
-      <p className="auth-form_subhead mb-8">
-        Войдите, чтобы продолжить обучение
-      </p>
+      <h1 className="auth-form_head mb-2">{t("auth.welcomeBack")}</h1>
+      <p className="auth-form_subhead mb-8">{t("auth.signInToContinue")}</p>
 
       <TextField name="email" isRequired className="mb-5" >
-        <Label className="auth-form_label mb-1">Email</Label>
+        <Label className="auth-form_label mb-1">{t("auth.email")}</Label>
         <Input
           type="email"
           name="email"
           className={`input w-full${fieldErrors.email ? " input--error" : ""}`}
           onChange={handleChange as (e: React.ChangeEvent<HTMLInputElement>) => void}
           onBlur={handleBlur}
-          placeholder="example@mail.com"
+          placeholder={t("auth.emailPlaceholder")}
           aria-describedby={fieldErrors.email ? "signin-email-error" : undefined}
         />
         {fieldErrors.email ? (
@@ -39,7 +39,7 @@ export function SignInForm(props: Props) {
       </TextField>
 
       <TextField name="password" isRequired className="mb-6" >
-        <Label className="auth-form_label mb-1">Пароль</Label>
+        <Label className="auth-form_label mb-1">{t("auth.password")}</Label>
         <Input
           type="password"
           name="password"
@@ -62,17 +62,17 @@ export function SignInForm(props: Props) {
         className="button auth-form_submit mb-4"
         isDisabled={isLoading}
       >
-        {isLoading ? "Вход..." : "Войти"}
+        {isLoading ? t("auth.signingIn") : t("auth.signIn")}
       </Button>
 
       <p className="auth-form_footer">
-        Нет аккаунта?{" "}
+        {t("auth.noAccount")}{" "}
         <Link
           to="/signup"
           id="signin-form-change"
           className="auth-form_switch-link"
         >
-          Создать аккаунт
+          {t("auth.createAccount")}
         </Link>
       </p>
 

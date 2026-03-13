@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { HamburgerIcon, CloseIcon } from "../icons";
 import person from "./person.svg";
 
@@ -19,6 +20,7 @@ interface Props {
 export function Header(props: Props) {
   const { user, isSigned, onSignOut } = props;
   const { firstName, lastName } = user;
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const [themePreference, setThemePreference] = useState<ThemePreference>(
     "system"
@@ -85,7 +87,7 @@ export function Header(props: Props) {
       }}
       className="button button--ghost header-action"
     >
-      Выйти
+      {t("common.signOut")}
     </button>
   ) : (
     <button
@@ -96,7 +98,7 @@ export function Header(props: Props) {
       }}
       className="button header-action"
     >
-      Войти
+      {t("common.signIn")}
     </button>
   );
 
@@ -107,7 +109,7 @@ export function Header(props: Props) {
       onClick={closeMenu}
     >
       <img src={person} width="12px" className="mr-4" alt="" />
-      <span className="mr-4">Профиль</span>
+      <span className="mr-4">{t("common.profile")}</span>
     </Link>
   ) : null;
 
@@ -119,7 +121,7 @@ export function Header(props: Props) {
       }
       onClick={closeMenu}
     >
-      Обучение
+      {t("common.learning")}
     </NavLink>
   ) : null;
 
@@ -132,7 +134,7 @@ export function Header(props: Props) {
         }
         onClick={closeMenu}
       >
-        Преподавание
+        {t("common.teaching")}
       </NavLink>
     ) : null;
 
@@ -153,7 +155,7 @@ export function Header(props: Props) {
         }
         onClick={closeMenu}
       >
-        Все курсы
+        {t("common.backToCourses")}
       </NavLink>
     </>
   );
@@ -211,6 +213,22 @@ export function Header(props: Props) {
           <span className="top-panel_logo">StudyKit</span>
 
           <div className="top-panel_profile top-panel_desktop-profile">
+            <div className="lang-switcher mr-2" role="group" aria-label="Язык">
+              <button
+                type="button"
+                className={`lang-switcher-btn${i18n.language === "ru" ? " lang-switcher-btn--active" : ""}`}
+                onClick={() => i18n.changeLanguage("ru")}
+              >
+                RU
+              </button>
+              <button
+                type="button"
+                className={`lang-switcher-btn${i18n.language === "en" ? " lang-switcher-btn--active" : ""}`}
+                onClick={() => i18n.changeLanguage("en")}
+              >
+                EN
+              </button>
+            </div>
             {linkToProfile}
             {userName}
             {themeToggle}
@@ -228,7 +246,7 @@ export function Header(props: Props) {
             tabIndex={-1}
             aria-label="Закрыть меню"
           />
-          <div className="top-panel_drawer" role="dialog" aria-label="Меню навигации">
+          <div className="top-panel_drawer" role="dialog" aria-label={t("common.navMenu")}>
             <button
               type="button"
               className="top-panel_drawer-close"
@@ -239,6 +257,22 @@ export function Header(props: Props) {
             </button>
             <nav className="top-panel_drawer-nav">{navLinks}</nav>
             <div className="top-panel_drawer-profile">
+              <div className="lang-switcher mb-3" role="group" aria-label="Язык">
+                <button
+                  type="button"
+                  className={`lang-switcher-btn${i18n.language === "ru" ? " lang-switcher-btn--active" : ""}`}
+                  onClick={() => i18n.changeLanguage("ru")}
+                >
+                  RU
+                </button>
+                <button
+                  type="button"
+                  className={`lang-switcher-btn${i18n.language === "en" ? " lang-switcher-btn--active" : ""}`}
+                  onClick={() => i18n.changeLanguage("en")}
+                >
+                  EN
+                </button>
+              </div>
               {linkToProfile}
               {userName}
               {themeToggle}

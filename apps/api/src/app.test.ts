@@ -1,8 +1,8 @@
 import { describe, it, expect } from "bun:test";
 import { Hono } from "hono";
 
-// Minimal app for testing endpoints that don't require DB/Redis.
-// Full app imports routes that connect to Postgres on load.
+// Minimal app for testing endpoints without DB/Redis.
+// Full API integration tests require a running database (docker compose up db).
 const testApp = new Hono();
 testApp.get("/health", (c) => c.json({ status: "ok" }));
 testApp.get("/ready", async (c) => c.json({ status: "ready" }));

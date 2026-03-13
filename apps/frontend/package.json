@@ -14,13 +14,20 @@
     "fmt": "prettier --write '**/*.{js,jsx,json,ts,tsx,css,html}'",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:ui": "vitest --ui"
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "lint": "eslint src --max-warnings 0",
+    "lint:fix": "eslint src --fix"
   },
   "dependencies": {
     "framer-motion": "^11.18.2",
+    "i18next": "^25.8.14",
     "react": "19.2.4",
     "react-aria-components": "^1.15.1",
     "react-dom": "19.2.4",
+    "react-i18next": "^16.5.4",
     "react-markdown": "10.1.0",
     "react-router": "7.13.0",
     "react-router-dom": "7.13.0",
@@ -29,6 +36,8 @@
     "web-vitals": "5.1.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.2.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
@@ -38,11 +47,15 @@
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
     "@vitejs/plugin-react": "^5.1.4",
+    "@vitest/coverage-v8": "^4.0.18",
     "@vitest/ui": "^4.0.18",
+    "eslint": "^10.0.2",
+    "eslint-plugin-react": "^7.37.5",
     "jsdom": "^28.1.0",
     "prettier": "3.8.1",
     "tailwindcss": "^4.2.1",
     "typescript": "^5.6.3",
+    "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1",
     "vitest": "^4.0.18"
   },

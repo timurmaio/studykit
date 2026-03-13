@@ -92,7 +92,7 @@ export function ShowContent() {
         <div className="lg:col-span-8">
           <div className="panel show-content-panel">
             {isLoading ? (
-              <div className="show-content-skeleton mx-8 mt-6">
+              <div className="show-content-skeleton mx-4 mt-6 lg:mx-8">
                 <div className="show-content-skeleton-title" />
                 <div className="show-content-skeleton-line" />
                 <div className="show-content-skeleton-line" style={{ width: "95%" }} />
@@ -103,18 +103,18 @@ export function ShowContent() {
               </div>
             ) : (
               <>
-                <header className="ml-8 mt-6 text-2xl font-bold mb-5 show-content-title">
+                <header className="mx-4 mt-6 lg:mx-8 text-2xl font-bold mb-5 show-content-title">
                   {content?.title || course.title}
                 </header>
                 {content?.body ? (
-                  <div className="mx-8 show-markdown">
+                  <div className="mx-4 lg:mx-8 show-markdown">
                     <ReactMarkdown>{content.body}</ReactMarkdown>
                   </div>
                 ) : null}
                 {contentError ? (
-                  <div className="alert alert-warning mx-8">{contentError}</div>
+                  <div className="alert alert-warning mx-4 lg:mx-8">{contentError}</div>
                 ) : null}
-                <div className="form-group mx-8">
+                <div className="form-group mx-4 lg:mx-8">
                   {content?.type === "SqlProblemContent" && (
                     <SqlProblemSection
                       key={content.id}

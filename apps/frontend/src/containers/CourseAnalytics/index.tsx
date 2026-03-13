@@ -80,6 +80,27 @@ export function CourseAnalytics() {
       .finally(() => setIsLoading(false));
   }, [id]);
 
+  const participants = data?.participants ?? [];
+  const progressDistribution = useMemo(() => {
+    return PROGRESS_BUCKETS.map((bucket) => ({
+      name: bucket.name,
+      value: participants.filter(
+        (p) => p.progressPercent >= bucket.min && p.progressPercent < bucket.max
+      ).length,
+    }));
+  }, [participants]);
+
+  const topBySolved = useMemo(() => {
+    return [...participants]
+      .sort((a, b) => b.solvedProblems - a.solvedProblems)
+      .slice(0, 10)
+      .map((p) => ({
+        name: formatName(p).slice(0, 20) + (formatName(p).length > 20 ? "…" : ""),
+        solved: p.solvedProblems,
+        progress: p.progressPercent,
+      }));
+  }, [participants]);
+
   if (isLoading) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-8">
@@ -100,27 +121,7 @@ export function CourseAnalytics() {
     );
   }
 
-  const { courseTitle, summary, participants } = data;
-
-  const progressDistribution = useMemo(() => {
-    return PROGRESS_BUCKETS.map((bucket) => ({
-      name: bucket.name,
-      value: participants.filter(
-        (p) => p.progressPercent >= bucket.min && p.progressPercent < bucket.max
-      ).length,
-    }));
-  }, [participants]);
-
-  const topBySolved = useMemo(() => {
-    return [...participants]
-      .sort((a, b) => b.solvedProblems - a.solvedProblems)
-      .slice(0, 10)
-      .map((p) => ({
-        name: formatName(p).slice(0, 20) + (formatName(p).length > 20 ? "…" : ""),
-        solved: p.solvedProblems,
-        progress: p.progressPercent,
-      }));
-  }, [participants]);
+  const { courseTitle, summary } = data;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 analytics-page">

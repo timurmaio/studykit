@@ -16,6 +16,9 @@ export interface LoginResponse {
   role: number;
 }
 
+/**
+ * Legacy API types. Frontend should use types/Course.ts for CourseItem, Lecture, LectureContent.
+ */
 export interface CourseOwner {
   id?: number;
   firstName: string;

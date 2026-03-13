@@ -1,0 +1,35 @@
+{
+  "auth": {
+    "welcomeBack": "С возвращением",
+    "signInToContinue": "Войдите, чтобы продолжить обучение",
+    "email": "Email",
+    "password": "Пароль",
+    "signIn": "Войти",
+    "signingIn": "Вход...",
+    "noAccount": "Нет аккаунта?",
+    "createAccount": "Создать аккаунт",
+    "emailPlaceholder": "example@mail.com"
+  },
+  "common": {
+    "loading": "Загрузка...",
+    "backToCourses": "Все курсы",
+    "backToCourse": "Назад к курсу",
+    "tryAgain": "Попробовать снова",
+    "courses": "Курсы",
+    "learning": "Обучение",
+    "teaching": "Преподавание",
+    "profile": "Профиль",
+    "signOut": "Выход",
+    "signIn": "Войти",
+    "navMenu": "Меню навигации"
+  },
+  "course": {
+    "subscribe": "Подписаться на курс",
+    "unsubscribe": "Отписаться",
+    "startLearning": "Начать обучение",
+    "continueLearning": "Продолжить обучение",
+    "lastLesson": "Последний урок",
+    "loadFailed": "Не удалось загрузить курс",
+    "congratsComplete": "Поздравляем — вы прошли курс полностью!"
+  }
+}

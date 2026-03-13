@@ -1,0 +1,8 @@
+# StudyKit - allow .env.example (contains placeholders only)
+title = "studykit-gitleaks"
+
+[allowlist]
+description = "Allow env example with placeholder values"
+paths = [
+  '''\.env\.example$''',
+]

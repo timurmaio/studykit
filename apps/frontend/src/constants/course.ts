@@ -16,7 +16,7 @@ export interface LastVisited {
 export function saveLastVisited(courseId: string | number, data: LastVisited): void {
   try {
     localStorage.setItem(getLastVisitedKey(courseId), JSON.stringify(data));
-  } catch {}
+  } catch { /* ignore localStorage errors */ }
 }
 
 export function loadLastVisited(courseId: string | number): LastVisited | null {

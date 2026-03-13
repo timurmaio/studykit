@@ -1,0 +1,35 @@
+{
+  "auth": {
+    "welcomeBack": "Welcome back",
+    "signInToContinue": "Sign in to continue learning",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signingIn": "Signing in...",
+    "noAccount": "No account?",
+    "createAccount": "Create account",
+    "emailPlaceholder": "example@mail.com"
+  },
+  "common": {
+    "loading": "Loading...",
+    "backToCourses": "All courses",
+    "backToCourse": "Back to course",
+    "tryAgain": "Try again",
+    "courses": "Courses",
+    "learning": "Learning",
+    "teaching": "Teaching",
+    "profile": "Profile",
+    "signOut": "Sign out",
+    "signIn": "Sign in",
+    "navMenu": "Navigation menu"
+  },
+  "course": {
+    "subscribe": "Subscribe to course",
+    "unsubscribe": "Unsubscribe",
+    "startLearning": "Start learning",
+    "continueLearning": "Continue learning",
+    "lastLesson": "Last lesson",
+    "loadFailed": "Failed to load course",
+    "congratsComplete": "Congratulations — you've completed the course!"
+  }
+}

@@ -2,10 +2,10 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 
 interface Props {
-  avatar: string;
+  avatar: string | null;
   title: string;
   description: string;
-  id: string;
+  id: number | string;
   type?: string;
   featured?: boolean;
 }

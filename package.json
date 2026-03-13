@@ -5,7 +5,10 @@
     "install:frontend": "pnpm --dir apps/frontend install",
     "build:frontend": "pnpm --dir apps/frontend build",
     "dev:frontend": "pnpm --dir apps/frontend dev",
-    "test": "pnpm --filter studykit-frontend test:run && pnpm --filter @studykit/api test"
+    "lint": "pnpm --filter studykit-frontend lint && pnpm --filter @studykit/api typecheck",
+    "test": "pnpm --filter studykit-frontend test:run && pnpm --filter @studykit/api test",
+    "test:coverage": "pnpm --filter studykit-frontend test:coverage",
+    "test:e2e": "pnpm --filter studykit-frontend test:e2e"
   },
   "devDependencies": {
     "drizzle-orm": "^0.44.5"

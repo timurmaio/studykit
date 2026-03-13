@@ -48,7 +48,7 @@ export function useShowContentData(params: UseShowContentDataParams): UseShowCon
           `last_visited_${cId}`,
           JSON.stringify({ lectureId: Number(lectureId), contentId: currentContentId, contentTitle })
         );
-      } catch {}
+      } catch { /* ignore localStorage errors */ }
     };
 
     if (userId) {

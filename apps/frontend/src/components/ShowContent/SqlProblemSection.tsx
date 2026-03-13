@@ -18,8 +18,8 @@ export function SqlProblemSection({ content, onStreamAbortRef }: SqlProblemSecti
   const [isHintOpen, setIsHintOpen] = useState(false);
   const [isHintCopied, setIsHintCopied] = useState(false);
 
-  const sqlHint =
-    content.sqlProblemId != null ? SQL_HINTS[content.sqlProblemId] : undefined;
+  const sqlProblemId = content.sqlProblemId ?? content.sql_problem_id;
+  const sqlHint = sqlProblemId != null ? SQL_HINTS[sqlProblemId] : undefined;
 
   const copyHint = useCallback(async () => {
     if (!sqlHint) return;
@@ -42,7 +42,7 @@ export function SqlProblemSection({ content, onStreamAbortRef }: SqlProblemSecti
 
     apiPost<{ id: number }>("/api/sql-solutions", {
       sql_solution: {
-        sql_problem_id: content.sqlProblemId || content.id,
+        sql_problem_id: content.sqlProblemId ?? content.sql_problem_id ?? content.id,
         code: solution,
       },
     })

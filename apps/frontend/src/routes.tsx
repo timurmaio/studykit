@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import {
   createBrowserRouter,
   Navigate,
@@ -5,13 +6,11 @@ import {
   redirect,
   useLoaderData,
 } from "react-router-dom";
-import { Suspense } from "react";
 import { apiGet } from "./config";
 import { AuthProvider } from "./contexts/AuthContext";
 import { App } from "./containers/App";
 import { Courses } from "./containers/Courses";
 import { Learning } from "./containers/Learning";
-import { Profile } from "./containers/Profile";
 import { SignIn } from "./containers/SignIn";
 import { SignUp } from "./containers/SignUp";
 import { Course } from "./components/Course";
@@ -19,10 +18,19 @@ import { ShowContent } from "./components/ShowContent";
 import { NotFound } from "./components/NotFound";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { TeacherRoute } from "./components/TeacherRoute";
-import { Teaching } from "./containers/Teaching";
-import { CourseAnalytics } from "./containers/CourseAnalytics";
 import { NewCourse } from "./components/NewCourse";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import type { CourseItem } from "./types/Course";
+
+const Profile = lazy(() =>
+  import("./containers/Profile").then((m) => ({ default: m.Profile }))
+);
+const Teaching = lazy(() =>
+  import("./containers/Teaching").then((m) => ({ default: m.Teaching }))
+);
+const CourseAnalytics = lazy(() =>
+  import("./containers/CourseAnalytics").then((m) => ({ default: m.CourseAnalytics }))
+);
 
 function RootLayout() {
   return (
@@ -118,7 +126,11 @@ export const router = createBrowserRouter([
         path: "profile",
         element: (
           <ProtectedRoute>
-            <Profile />
+            <ErrorBoundary>
+              <Suspense fallback={<LoadingFallback />}>
+                <Profile />
+              </Suspense>
+            </ErrorBoundary>
           </ProtectedRoute>
         ),
         loader: profileLoader,
@@ -153,7 +165,11 @@ export const router = createBrowserRouter([
         path: "courses/:id/analytics",
         element: (
           <TeacherRoute>
-            <CourseAnalytics />
+            <ErrorBoundary>
+              <Suspense fallback={<LoadingFallback />}>
+                <CourseAnalytics />
+              </Suspense>
+            </ErrorBoundary>
           </TeacherRoute>
         ),
       },
@@ -174,7 +190,11 @@ export const router = createBrowserRouter([
         path: "teaching",
         element: (
           <TeacherRoute>
-            <Teaching />
+            <ErrorBoundary>
+              <Suspense fallback={<LoadingFallback />}>
+                <Teaching />
+              </Suspense>
+            </ErrorBoundary>
           </TeacherRoute>
         ),
       },

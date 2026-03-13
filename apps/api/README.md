@@ -45,3 +45,10 @@ SQL Solutions:
 ## Endpoint reference (REST)
 
 All routes use kebab-case. Query params: `?owner=` for courses by owner, `?enrolled=` for courses user is enrolled in.
+
+## API documentation
+
+When the API is running:
+
+- **Swagger UI:** http://localhost:3100/docs
+- **OpenAPI spec:** http://localhost:3100/openapi.json
