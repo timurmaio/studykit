@@ -14,9 +14,9 @@ export default defineConfig({
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-recharts': ['recharts'],
-          'vendor-framer-motion': ['framer-motion'],
+        manualChunks(id) {
+          if (id.includes("node_modules/recharts")) return "vendor-recharts";
+          if (id.includes("node_modules/framer-motion")) return "vendor-framer-motion";
         },
       },
     },

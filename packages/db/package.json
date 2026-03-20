@@ -8,6 +8,6 @@
     "./schema": "./src/schema.ts"
   },
   "peerDependencies": {
-    "drizzle-orm": "^0.44.5"
+    "drizzle-orm": "^0.45.1"
   }
 }
