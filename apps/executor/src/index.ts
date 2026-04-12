@@ -14,7 +14,7 @@ interface Payload {
   executable?: boolean;
 }
 
-function castValue(value: string | number | null): unknown {
+function castValue(value: unknown): unknown {
   if (value === null || value === undefined) return null;
   if (typeof value === "number") return value;
   if (typeof value === "string") {

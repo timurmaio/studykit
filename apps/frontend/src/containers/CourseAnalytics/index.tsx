@@ -12,6 +12,7 @@ import {
   Pie,
   Cell,
   Legend,
+  type PieLabelRenderProps,
 } from "recharts";
 import { apiGet } from "../../config";
 
@@ -182,16 +183,21 @@ export function CourseAnalytics() {
                     paddingAngle={2}
                     dataKey="value"
                     nameKey="name"
-                    label={({ name, value }: { name: string; value: number }) =>
-                      value > 0 ? `${name}: ${value}` : null
-                    }
+                    label={(props: PieLabelRenderProps) => {
+                      const { name, value } = props;
+                      if (typeof value !== "number" || value <= 0) return null;
+                      return `${name ?? ""}: ${value}`;
+                    }}
                   >
                     {progressDistribution.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={CHART_COLORS[index]} />
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value: number) => [value, "участников"]}
+                    formatter={(value) => [
+                      typeof value === "number" ? value : 0,
+                      "участников",
+                    ]}
                     contentStyle={{
                       backgroundColor: "var(--color-surface)",
                       border: "1px solid var(--color-border)",
@@ -226,7 +232,10 @@ export function CourseAnalytics() {
                     tick={{ fontSize: 12 }}
                   />
                   <Tooltip
-                    formatter={(value: number) => [`${value} задач`, "решено"]}
+                    formatter={(value) => [
+                      `${typeof value === "number" ? value : 0} задач`,
+                      "решено",
+                    ]}
                     contentStyle={{
                       backgroundColor: "var(--color-surface)",
                       border: "1px solid var(--color-border)",

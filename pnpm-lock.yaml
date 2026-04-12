@@ -13,13 +13,13 @@ importers:
         version: 1.0.4
     devDependencies:
       drizzle-orm:
-        specifier: ^0.44.5
-        version: 0.44.7
+        specifier: ^0.45.1
+        version: 0.45.1
 
 packages:
 
-  drizzle-orm@0.44.7:
-    resolution: {integrity: sha512-quIpnYznjU9lHshEOAYLoZ9s3jweleHlZIAWR/jX9gAWNg/JhQ1wj0KGRf7/Zm+obRrYd9GjPVJg790QY9N5AQ==}
+  drizzle-orm@0.45.1:
+    resolution: {integrity: sha512-Te0FOdKIistGNPMq2jscdqngBRfBpC8uMFVwqjf6gtTVJHIQ/dosgV/CLBU2N4ZJBsXL5savCba9b0YJskKdcA==}
     peerDependencies:
       '@aws-sdk/client-rds-data': '>=3'
       '@cloudflare/workers-types': '>=4'
@@ -118,7 +118,7 @@ packages:
 
 snapshots:
 
-  drizzle-orm@0.44.7: {}
+  drizzle-orm@0.45.1: {}
 
   lockfile@1.0.4:
     dependencies:

@@ -21,6 +21,11 @@ jobs:
           node-version: "22"
           cache: "pnpm"
 
+      # API package tests run via `bun test` (see apps/api/package.json)
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 

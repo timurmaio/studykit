@@ -38,7 +38,7 @@ const mockCourse = {
     {
       id: 10,
       title: "Раздел 1",
-      content: [{ id: 100, title: "Урок 1", type: "MarkdownContent" }],
+      content: [{ id: 100, title: "Урок 1", type: "MarkdownContent" as const }],
     },
   ],
   solvedIds: [],
